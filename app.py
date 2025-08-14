@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 import sqlite3
+import os
 from datetime import datetime
 from collections import Counter
 from flask import session
@@ -7,11 +8,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Required for flash messages
+app.secret_key = 'your_secret_key'  # Required for flash messages\
+#BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+#'tickets.db' = os.path.join(BASE_DIR, 'data', 'tickets.db')
 
 # Initialize SQLite database
 def init_db():
     conn = sqlite3.connect('tickets.db')
+    #os.makedirs(os.path.dirname('tickets.db'), exist_ok=True)  # Ensure folder exists
+    #conn = sqlite3.connect('tickets.db')
     cursor = conn.cursor()
     
     # Create table if it doesn't exist
@@ -362,6 +367,19 @@ def existing_users():
     conn.close()
     users_list = [{'username': row[0], 'role': row[1]} for row in users]
     return jsonify(users_list)
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Docker and monitoring"""
+    try:
+        # Test database connection
+        conn = sqlite3.connect('tickets.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT 1')
+        conn.close()
+        return jsonify({'status': 'healthy', 'database': 'connected'}), 200
+    except Exception as e:
+        return jsonify({'status': 'unhealthy', 'error': str(e)}), 503
 
 # Initialize database and run app
 if __name__ == '__main__':
