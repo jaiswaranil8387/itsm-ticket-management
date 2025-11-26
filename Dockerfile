@@ -1,63 +1,56 @@
 # ========================
 # 1st stage: Builder
-# This stage installs dependencies.
 # ========================
 FROM python:3.11-slim-bookworm AS builder
 
-# Set environment variables for Python.
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install uv for dependency management.
-RUN pip install uv
-
-# Set the working directory for the builder stage.
 WORKDIR /app
 
-# Copy dependency file to leverage Docker's build cache.
-COPY pyproject.toml .
+# Install build tool
+RUN pip install uv
 
-# Create a virtual environment and install dependencies.
+# Copy requirements and install dependencies
+# (We install into .venv so we can copy it easily later)
+COPY requirements.txt .
 RUN uv venv .venv \
-    && uv pip install --python .venv/bin/python flask==2.0.2 werkzeug==2.3.7
+    && uv pip install --python .venv/bin/python -r requirements.txt
 
-# Copy the rest of the application source code.
+# Copy source code
 COPY . .
 
 # ============================
-# 2nd stage: Distroless Runtime
-# This is our final, minimal image.
+# 2nd stage: Runtime
 # ============================
-FROM gcr.io/distroless/python3-debian12
+FROM python:3.11-slim-bookworm
 
-# Set the working directory.
 WORKDIR /app
 
-# Copy the application source code.
+# Install PostgreSQL client libraries (REQUIRED for psycopg2)
+# We also install curl if you ever need it for debugging, 
+# though your python healthcheck doesn't strictly need it.
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy application from builder
 COPY --from=builder /app .
 
-# Find the Python version to correctly locate the site-packages.
-# This assumes Python 3.11, as specified in the builder stage.
-ARG PYTHON_VERSION=3.11
+# Copy installed python packages
+# We copy to the standard python path so we don't need complex PYTHONPATH env vars
+COPY --from=builder /app/.venv/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
-# Copy only the site-packages from the virtual environment.
-# This contains the installed dependencies like Flask and Werkzeug.
-COPY --from=builder /app/.venv/lib/python${PYTHON_VERSION}/site-packages /app/site-packages
+# --- YOUR PREFERRED STYLE ---
+# Using python3 is safer than hardcoding /usr/bin/python3.11 in slim images
+# but we keep your absolute path structure for the script.
+ENTRYPOINT ["python3"]
 
-# Set the PYTHONPATH to tell the native distroless Python interpreter
-# where to find the installed packages.
-ENV PYTHONPATH=/app/site-packages
-
-# Explicitly set the ENTRYPOINT to the Python interpreter.
-# This is a robust pattern for distroless images.
-ENTRYPOINT ["/usr/bin/python3.11"]
-
-# The CMD now serves as the default argument to the ENTRYPOINT.
-# It specifies which Python script to run.
+# Absolute path as requested
 CMD ["/app/app.py"]
 
-# Update the healthcheck to use the native Python interpreter.
+# Your clean Healthcheck (Ensure healthcheck.py exists!)
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD ["/usr/bin/python3.11", "/app/healthcheck.py"]
+    CMD ["python3", "/app/healthcheck.py"]
 
 EXPOSE 5000

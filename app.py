@@ -1,37 +1,42 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import os
 from datetime import datetime
 from collections import Counter
-from flask import session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Required for flash messages\
-#BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-#'tickets.db' = os.path.join(BASE_DIR, 'data', 'tickets.db')
+app.secret_key = 'your_secret_key'  # Required for flash messages
 
-# Initialize SQLite database
+# Database Connection Function
+def get_db_connection():
+    conn = psycopg2.connect(
+        host=os.environ.get('DB_HOST', 'localhost'),
+        database=os.environ.get('DB_NAME', 'app'),
+        user=os.environ.get('DB_USER', 'app'),
+        password=os.environ.get('DB_PASSWORD', 'password')
+    )
+    return conn
+
+# Initialize PostgreSQL database
 def init_db():
-    conn = sqlite3.connect('tickets.db')
-    #os.makedirs(os.path.dirname('tickets.db'), exist_ok=True)  # Ensure folder exists
-    #conn = sqlite3.connect('tickets.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Create table if it doesn't exist
+    # Create tickets table (Note: SERIAL instead of AUTOINCREMENT)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tickets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             title TEXT NOT NULL,
             description TEXT,
             priority TEXT,
             status TEXT,
-            created_at TEXT
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
-    # ✅ Check if tickets already exist
+    # Check if tickets already exist
     cursor.execute('SELECT COUNT(*) FROM tickets')
     count = cursor.fetchone()[0]
 
@@ -45,13 +50,13 @@ def init_db():
         ]
         cursor.executemany('''
             INSERT INTO tickets (title, description, priority, status, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         ''', sample_tickets)
     
-        # Create users table
+    # Create users table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             role TEXT CHECK(role IN ('admin', 'readonly')) NOT NULL
@@ -61,28 +66,26 @@ def init_db():
     # Optional: Add default admin if none exists
     cursor.execute('SELECT COUNT(*) FROM users')
     if cursor.fetchone()[0] == 0:
-        from werkzeug.security import generate_password_hash
         cursor.execute('''
             INSERT INTO users (username, password, role)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         ''', ('admin', generate_password_hash('admin123'), 'admin'))
-
 
     conn.commit()
     conn.close()
 
-
 # Add a new ticket
 def add_ticket(title, description, priority):
     if priority not in ['High', 'Medium', 'Low']:
-        priority = 'Low'  # Default if invalid
+        priority = 'Low'
     status = 'Open'
     created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    conn = sqlite3.connect('tickets.db')
+    
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO tickets (title, description, priority, status, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s)
     ''', (title, description, priority, status, created_at))
     conn.commit()
     conn.close()
@@ -90,58 +93,76 @@ def add_ticket(title, description, priority):
 
 # Update ticket status
 def update_ticket_status(ticket_id, new_status):
-    conn = sqlite3.connect('tickets.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE tickets SET status = ? WHERE id = ?', (new_status, ticket_id))
+    cursor.execute('UPDATE tickets SET status = %s WHERE id = %s', (new_status, ticket_id))
     conn.commit()
     conn.close()
 
-# Update ticket title, description, and priority
+# Update ticket details
 def update_ticket(ticket_id, title, description, priority):
     if priority not in ['High', 'Medium', 'Low']:
-        priority = 'Low'  # Default if invalid
-    conn = sqlite3.connect('tickets.db')
+        priority = 'Low'
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE tickets SET title = ?, description = ?, priority = ? WHERE id = ?', (title, description, priority, ticket_id))
+    cursor.execute('UPDATE tickets SET title = %s, description = %s, priority = %s WHERE id = %s', 
+                   (title, description, priority, ticket_id))
     conn.commit()
     conn.close()
     return priority
 
 # Get all tickets
 def get_all_tickets():
-    conn = sqlite3.connect('tickets.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM tickets')
-    tickets = cursor.fetchall()
+    conn = get_db_connection()
+    # Use RealDictCursor to access columns by name (like ticket['title'])
+    cursor = conn.cursor(cursor_factory=RealDictCursor) 
+    cursor.execute('SELECT * FROM tickets ORDER BY id ASC')
+    tickets_dict = cursor.fetchall()
     conn.close()
-    return tickets
+    
+    # Convert DictRows back to tuples/lists to match your existing template logic
+    # Your template expects: ticket[3] (priority), ticket[4] (status)
+    # Mapping: id(0), title(1), description(2), priority(3), status(4), created_at(5)
+    tickets_list = []
+    for t in tickets_dict:
+        tickets_list.append((t['id'], t['title'], t['description'], t['priority'], t['status'], t['created_at']))
+    
+    return tickets_list
 
-# Search tickets by title
+# Search tickets
 def search_tickets_by_title(query):
-    conn = sqlite3.connect('tickets.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM tickets WHERE title LIKE ?', ('%' + query + '%',))
-    tickets = cursor.fetchall()
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute('SELECT * FROM tickets WHERE title ILIKE %s', ('%' + query + '%',)) # ILIKE is case-insensitive
+    tickets_dict = cursor.fetchall()
     conn.close()
-    return tickets
+    
+    tickets_list = []
+    for t in tickets_dict:
+        tickets_list.append((t['id'], t['title'], t['description'], t['priority'], t['status'], t['created_at']))
+    return tickets_list
 
-# Get a single ticket by ID
+# Get single ticket
 def get_ticket_by_id(ticket_id):
-    conn = sqlite3.connect('tickets.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM tickets WHERE id = ?', (ticket_id,))
-    ticket = cursor.fetchone()
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute('SELECT * FROM tickets WHERE id = %s', (ticket_id,))
+    t = cursor.fetchone()
     conn.close()
-    return ticket
+    
+    if t:
+        return (t['id'], t['title'], t['description'], t['priority'], t['status'], t['created_at'])
+    return None
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         uname = request.form['username']
         pwd = request.form['password']
-        conn = sqlite3.connect('tickets.db')
+        
+        conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT password, role FROM users WHERE username = ?', (uname,))
+        cursor.execute('SELECT password, role FROM users WHERE username = %s', (uname,))
         user = cursor.fetchone()
         conn.close()
 
@@ -162,7 +183,7 @@ def logout():
 
 @app.before_request
 def require_login():
-    allowed_routes = ['login', 'static']
+    allowed_routes = ['login', 'static', 'health_check'] # Added health_check to allowed
     if 'username' not in session and request.endpoint not in allowed_routes:
         return redirect(url_for('login'))
 
@@ -176,9 +197,8 @@ def index():
     else:
         tickets = get_all_tickets()
 
-    # Avoid crash when no tickets exist
-    priorities = [ticket[3] for ticket in tickets if len(ticket) > 3]
-    statuses = [ticket[4] for ticket in tickets if len(ticket) > 4]
+    priorities = [ticket[3] for ticket in tickets]
+    statuses = [ticket[4] for ticket in tickets]
 
     priority_counts = dict(Counter(priorities))
     status_counts = dict(Counter(statuses))
@@ -195,39 +215,21 @@ def index():
 
 @app.route("/home")
 def home():
-    tickets = get_all_tickets()
-
-    priorities = [ticket[3] for ticket in tickets]  # assuming 3rd index is priority
-    statuses = [ticket[4] for ticket in tickets]    # assuming 4th index is status
-
-    priority_counts = dict(Counter(priorities))
-    status_counts = dict(Counter(statuses))
-
-    return render_template("index.html",
-                           tickets=tickets,
-                           priority_counts=priority_counts,
-                           status_counts=status_counts,
-                           active_tab='home',
-                           role=session.get('role'))
+    return index()
 
 @app.route("/get_chart_data")
 def get_chart_data():
     tickets = get_all_tickets()
-
-    priorities = [ticket[3] for ticket in tickets]  # assuming 3rd index is priority
-    statuses = [ticket[4] for ticket in tickets]    # assuming 4th index is status
-
-    priority_counts = dict(Counter(priorities))
-    status_counts = dict(Counter(statuses))
-
+    priorities = [ticket[3] for ticket in tickets]
+    statuses = [ticket[4] for ticket in tickets]
     return jsonify({
-        'priority_counts': priority_counts,
-        'status_counts': status_counts
+        'priority_counts': dict(Counter(priorities)),
+        'status_counts': dict(Counter(statuses))
     })
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():
-    query = request.form.get('search_query', '')     if request.method == 'POST' else ''
+    query = request.form.get('search_query', '') if request.method == 'POST' else ''
     if query:
         tickets = search_tickets_by_title(query)
     else:
@@ -299,14 +301,8 @@ def manage_users():
         flash("Unauthorized access", "danger")
         return redirect(url_for('index'))
 
-    conn = sqlite3.connect('tickets.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
-
-    # Fetch existing users for display
-    cursor.execute('SELECT username, role FROM users')
-    users = cursor.fetchall()  # Fetch all rows
-    print(f"Fetched users: {users}")  # Debug print to check data
-    users_list = [{'username': row[0], 'role': row[1]} for row in users]  # Convert to list of dicts
 
     if request.method == 'POST':
         username = request.form.get('username')
@@ -325,31 +321,32 @@ def manage_users():
                 hashed_pw = generate_password_hash(password)
                 try:
                     cursor.execute(
-                        'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+                        'INSERT INTO users (username, password, role) VALUES (%s, %s, %s)',
                         (username, hashed_pw, role)
                     )
+                    conn.commit()
                     flash(f"User '{username}' added as {role}.", 'success')
-                    # Refresh users list after addition
-                    cursor.execute('SELECT username, role FROM users')
-                    users = cursor.fetchall()
-                    users_list = [{'username': row[0], 'role': row[1]} for row in users]
-                except sqlite3.IntegrityError:
+                except psycopg2.IntegrityError:
+                    conn.rollback()
                     flash(f"User '{username}' already exists.", 'warning')
+                except Exception as e:
+                    conn.rollback()
+                    flash(f"Error: {str(e)}", 'danger')
 
         elif action == 'remove':
             if not username:
                 flash("No username provided for deletion.", "warning")
             else:
-                cursor.execute('DELETE FROM users WHERE username = ?', (username,))
+                cursor.execute('DELETE FROM users WHERE username = %s', (username,))
+                conn.commit()
                 flash(f"User '{username}' removed.", 'info')
-                # Refresh users list after deletion
-                cursor.execute('SELECT username, role FROM users')
-                users = cursor.fetchall()
-                users_list = [{'username': row[0], 'role': row[1]} for row in users]
 
-        conn.commit()
-
+    # Fetch existing users for display
+    cursor.execute('SELECT username, role FROM users')
+    users = cursor.fetchall()
     conn.close()
+    
+    users_list = [{'username': row[0], 'role': row[1]} for row in users]
     return render_template('index.html', users=users_list, active_tab='manage_users', role=session.get('role'))
     
 @app.route('/existing_users', methods=['GET', 'POST'])
@@ -358,22 +355,19 @@ def existing_users():
         flash("Unauthorized access", "danger")
         return redirect(url_for('index'))
 
-    conn = sqlite3.connect('tickets.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
-
-    # Fetch existing users for display
     cursor.execute('SELECT username, role FROM users')
-    users = cursor.fetchall()  # Fetch all rows
+    users = cursor.fetchall()
     conn.close()
+    
     users_list = [{'username': row[0], 'role': row[1]} for row in users]
     return jsonify(users_list)
 
 @app.route('/health')
 def health_check():
-    """Health check endpoint for Docker and monitoring"""
     try:
-        # Test database connection
-        conn = sqlite3.connect('tickets.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT 1')
         conn.close()
@@ -383,5 +377,11 @@ def health_check():
 
 # Initialize database and run app
 if __name__ == '__main__':
-    init_db()
+    # Only run init_db if we want to ensure tables exist.
+    # In K8s, usually better to run this as a Job, but this is fine for now.
+    try:
+        init_db()
+    except Exception as e:
+        print(f"DB Init Warning (ignore if tables exist): {e}")
+        
     app.run(host='0.0.0.0', port=5000, debug=False)
