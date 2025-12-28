@@ -1,0 +1,181 @@
+---
+- name: Install and Configure Monitoring Stack
+  hosts: master
+  become: no
+  vars:
+    monitoring_ns: monitoring
+
+  tasks:
+
+    # --------------------------------------------------
+    # Step 0: Install Helm (Required Pre-requisite)
+    # --------------------------------------------------
+    - name: 0a. Check if Helm is installed
+      command: helm version
+      register: helm_check
+      ignore_errors: yes
+      changed_when: false
+
+    - name: 0b. Download Helm installation script
+      get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        dest: /tmp/get_helm.sh
+        mode: '0700'
+      when: helm_check.rc != 0
+
+    - name: 0c. Run Helm installation script
+      become: yes
+      command: /tmp/get_helm.sh
+      when: helm_check.rc != 0
+
+    # --------------------------------------------------
+    # Step 1: Add Helm repo
+    # --------------------------------------------------
+    - name: Add prometheus-community Helm repo
+      command: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+    - name: Update Helm repos
+      command: helm repo update
+
+    # --------------------------------------------------
+    # Step 2: Create monitoring namespace
+    # --------------------------------------------------
+    - name: Create monitoring namespace
+      kubernetes.core.k8s:
+        name: "{{ monitoring_ns }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    # --------------------------------------------------
+    # Step 3: Install kube-prometheus-stack
+    # --------------------------------------------------
+    # Helm requires a physical file, so we still copy this one.
+    - name: 3a. Stage values file to /tmp
+      copy:
+        src: "{{ playbook_dir }}/monitor-values.yaml"
+        dest: /tmp/monitor-values.yaml
+
+    - name: 3b. Install monitoring stack
+      command: >
+        helm upgrade --install monitoring
+        prometheus-community/kube-prometheus-stack
+        --namespace {{ monitoring_ns }}
+        -f /tmp/monitor-values.yaml
+
+    # --------------------------------------------------
+    # Step 4: Create Grafana Ingress (Updated to use lookup)
+    # --------------------------------------------------
+    - name: Apply Grafana ingress
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', '{{ playbook_dir }}/grafana-ingress.yaml') }}"
+
+    # --------------------------------------------------
+    # Step 5: Install Blackbox Exporter
+    # --------------------------------------------------
+    - name: Install Blackbox exporter
+      command: >
+        helm upgrade --install blackbox
+        prometheus-community/prometheus-blackbox-exporter
+        -n {{ monitoring_ns }}
+
+    # --------------------------------------------------
+    # Step 6: Configure Blackbox Probe (Updated to use lookup)
+    # --------------------------------------------------
+    - name: Apply HTTP Blackbox probe
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', '{{ playbook_dir }}/ticketing-app-monitor-blackbox.yaml') }}"
+
+    # --------------------------------------------------
+    # Step 7: Create TCP Probe YAML (Updated to use lookup)
+    # --------------------------------------------------
+    - name: Apply DB TCP probe
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', '{{ playbook_dir }}/db-monitor-blackbox.yaml') }}"
+
+    # --------------------------------------------------
+    # Step 8: Patch Blackbox ConfigMap for TCP
+    # --------------------------------------------------
+    - name: Patch blackbox configmap with TCP probe
+      kubernetes.core.k8s:
+        state: patched
+        kind: ConfigMap
+        name: blackbox-prometheus-blackbox-exporter
+        namespace: "{{ monitoring_ns }}"
+        merge_type: merge
+        definition:
+          data:
+            blackbox.yml: |
+              modules:
+                tcp_connect:
+                  prober: tcp
+                  timeout: 5s
+
+    # --------------------------------------------------
+    # Step 9: Copy DB Secret
+    # --------------------------------------------------
+    - name: 9a. Install jq
+      become: yes
+      apt:
+        name: jq
+        state: present
+        update_cache: yes
+
+    - name: 9b. Copy DB Secret to Monitoring Namespace
+      ansible.builtin.shell: |
+        until kubectl get secret app-db-app -n default >/dev/null 2>&1; do 
+            echo "Waiting for secret in default namespace..."; 
+            sleep 5; 
+        done
+
+        kubectl get secret app-db-app -n default -o json | \
+        jq 'del(.metadata.ownerReferences, .metadata.uid, .metadata.resourceVersion, .metadata.creationTimestamp) | .metadata.namespace = "{{ monitoring_ns }}"' | \
+        kubectl apply -f -
+      register: secret_copy
+      changed_when: "'created' in secret_copy.stdout or 'configured' in secret_copy.stdout"
+
+    # --------------------------------------------------
+    # Step 10: Deploy Postgres exporter (Updated to use lookup)
+    # --------------------------------------------------
+    - name: Apply ticket metrics exporter
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', '{{ playbook_dir }}/ticket-metrics-exporter.yaml') }}"
+
+    # --------------------------------------------------
+    # Step 11: Create ServiceMonitor (Updated to use lookup)
+    # --------------------------------------------------
+    - name: Apply ServiceMonitor
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', '{{ playbook_dir }}/ticket-stats-service.yaml') }}"
+
+    # --------------------------------------------------
+    # Step 12: Create Service (Updated to use lookup)
+    # --------------------------------------------------
+    - name: Apply stats service
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', '{{ playbook_dir }}/ticket-stats-monitor.yaml') }}"
+
+    # --------------------------------------------------
+    # Step 13: Import Custom Grafana Dashboard (FIXED)
+    # --------------------------------------------------
+    - name: Create ConfigMap for Custom Dashboard
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: custom-app-dashboard
+            namespace: "{{ monitoring_ns }}"
+            labels:
+              # This label tells the Grafana Sidecar to load this map
+              grafana_dashboard: "1"
+          data:
+            # FIX: We pipe to 'from_yaml' then 'to_json' to ensure it is sent as a STRING, not an Object.
+            app-dashboard.json: "{{ lookup('file', playbook_dir + '/dashboard-monitoring.yaml') | from_yaml | to_json }}"

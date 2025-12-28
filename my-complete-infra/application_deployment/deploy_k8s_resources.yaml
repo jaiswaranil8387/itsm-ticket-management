@@ -1,0 +1,229 @@
+---
+- name: Deploy Kubernetes Resources and CloudNativePG Operator
+  hosts: master
+  become: no
+  gather_facts: no
+
+  # --- CRITICAL FIX: This makes KUBECONFIG available to ALL tasks ---
+  environment:
+    KUBECONFIG: /home/ubuntu/.kube/config
+
+  tasks:
+    - name: Wait until all nodes are Ready
+      shell: |
+        echo "Checking nodes..."
+        READY_NODES=0
+        while [ $READY_NODES -lt 2 ]; do
+          READY_NODES=$(kubectl get nodes --no-headers 2>/dev/null | grep -c " Ready" || true)
+          echo "Nodes Ready: $READY_NODES... waiting..."
+          sleep 5
+        done
+        echo "All nodes are Ready!"
+      args:
+        executable: /bin/bash
+      register: node_status
+      changed_when: false
+      failed_when: node_status.rc != 0
+          
+    - name: 0. Install Python Kubernetes Client (Required for Ansible Modules)
+      become: yes     # Switch to Root just for this task
+      apt:
+        name: python3-kubernetes
+        state: present
+        update_cache: yes
+
+    # --- 1. INSTALL NGINX ---
+    - name: 1a. Install NGINX Ingress Controller
+      ansible.builtin.shell:
+        cmd: "kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml"
+      register: ingress_install
+      changed_when: "'created' in ingress_install.stdout or 'configured' in ingress_install.stdout"
+
+    - ansible.builtin.debug:
+        msg: "NGINX Ingress Controller installed."
+
+    # --- 1b. WAIT FOR NGINX (Crucial Step) ---
+    - name: Wait for NGINX Controller Pods to be fully Ready
+      ansible.builtin.shell:
+        cmd: "kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s"
+      register: ingress_wait
+      changed_when: false
+
+    # Optional: Add a small buffer for the Service to register endpoints
+    - name: Buffer sleep for Webhook Service
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Wait for NGINX Ingress Controller to be Ready
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: ingress-nginx-controller
+        namespace: ingress-nginx
+        wait: yes
+        wait_timeout: 300
+        wait_condition:
+          type: Available
+          status: "True"
+
+    # --- 2. NAMESPACE ---
+    - name: 2. Create Application Namespace
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', 'namespace.yaml') }}"
+
+    # --- 3. APP DEPLOYMENT ---
+    - name: 3. Deploy Application (Deployment & Service)
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', item) }}"
+      loop:
+        - active-deployment.yaml
+        - service.yaml
+
+    # --- 4. INGRESS ---
+    - name: 4. Apply Ingress Routes
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', item) }}"
+      loop:
+        - ingress.yaml
+        - public-ingress.yaml
+
+    # --- 5. CNPG OPERATOR ---
+    - name: 5a. Install CloudNativePG Operator (CNPG)
+      ansible.builtin.shell:
+        # Added --server-side to fix the "metadata.annotations: Too long" error
+        cmd: "kubectl apply --server-side --force-conflicts -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.25/releases/cnpg-1.25.0.yaml"
+      register: cnpg_install
+      changed_when: "'created' in cnpg_install.stdout or 'configured' in cnpg_install.stdout"
+
+   # --- NEW TASK: WAIT FOR CNPG (Fixes Webhook Error) ---
+    - name: Wait for CNPG Operator to be Ready
+      ansible.builtin.shell:
+        cmd: "kubectl wait deployment -n cnpg-system cnpg-controller-manager --for=condition=Available --timeout=120s"
+      register: cnpg_wait
+      changed_when: false
+
+    - name: Buffer sleep for CNPG Webhook
+      ansible.builtin.pause:
+        seconds: 10
+
+    # --- 5b. SETUP STORAGE CLASS (Fixes 'Pending' Pods) ---
+    - name: 5b. Install Local Path Storage Provisioner
+      ansible.builtin.shell:
+        cmd: "kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.26/deploy/local-path-storage.yaml"
+      register: storage_install
+      changed_when: "'created' in storage_install.stdout"
+
+    - name: 5c. Make 'local-path' the Default Storage Class
+      ansible.builtin.shell:
+        cmd: "kubectl patch storageclass local-path -p '{\"metadata\": {\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"true\"}}}'"
+      register: storage_patch
+      changed_when: "'patched' in storage_patch.stdout"
+
+    # --- 6. POSTGRES CLUSTER ---
+    - name: 6a. Deploy Postgres Cluster
+      kubernetes.core.k8s:
+        state: present
+        namespace: default
+        definition: "{{ lookup('file', 'postgres-cluster.yaml') }}"
+
+    # --- 6a. Install 'jq' (Required to clean the secret JSON) ---
+    - name: 6a. Install jq
+      become: yes  # Needs root to install packages
+      apt:
+        name: jq
+        state: present
+        update_cache: yes
+
+    # --- 6b. COPY SECRET TO APP NAMESPACE (FIXED) ---
+    - name: 6b. Copy DB Secret to App Namespace
+      ansible.builtin.shell: |
+        # Wait for secret to exist
+        until kubectl get secret app-db-app -n default >/dev/null 2>&1; do echo "Waiting..."; sleep 5; done
+        
+        # Copy secret using jq
+        kubectl get secret app-db-app -n default -o json | jq 'del(.metadata.ownerReferences, .metadata.uid, .metadata.resourceVersion, .metadata.creationTimestamp) | .metadata.namespace = "ticketing-app"' | kubectl apply -f -
+      register: secret_copy
+      changed_when: "'created' in secret_copy.stdout or 'configured' in secret_copy.stdout"
+
+    # --- 7. PATCH NGINX (TCP Passthrough) ---
+    - name: 7. Enable TCP passthrough in Ingress-NGINX
+      ansible.builtin.shell: |
+        # Check if already patched to avoid duplicates
+        if ! kubectl get deployment ingress-nginx-controller -n ingress-nginx -o yaml | grep -q "tcp-services-configmap"; then
+          kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type='json' \
+            -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--tcp-services-configmap=$(POD_NAMESPACE)/tcp-services"}]'
+          echo "patched"
+        else
+          echo "already_patched"
+        fi
+      register: tcp_patch_result
+      changed_when: "'patched' in tcp_patch_result.stdout and 'already_patched' not in tcp_patch_result.stdout"
+
+    # --- 8. TCP CONFIGMAP ---
+    - name: 8. Create TCP-services ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', 'tcp-services.yaml') }}"
+
+    # --- 9. PATCH SERVICE (NodePort) ---
+    - name: 9. Expose Postgres NodePort 30432
+      ansible.builtin.shell: |
+        # Check if port 30432 is already open
+        if ! kubectl get svc ingress-nginx-controller -n ingress-nginx -o yaml | grep -q "30432"; then
+          kubectl patch svc ingress-nginx-controller -n ingress-nginx --type='json' \
+            -p='[{"op":"add", "path":"/spec/ports/-", "value":{"name":"postgres", "port":5432, "targetPort":5432, "protocol":"TCP", "nodePort":30432}}]'
+          echo "patched"
+        else
+          echo "already_patched"
+        fi
+      register: service_patch_result
+      changed_when: "'patched' in service_patch_result.stdout and 'already_patched' not in service_patch_result.stdout"
+
+    # --- 10. DATABASE RESTORE ---
+    - name: 10a. Upload backup file to Master Node
+      copy:
+        src: backup.sql
+        dest: /tmp/backup.sql
+
+    - name: 10b. Restore Postgres Database
+      ansible.builtin.shell: |
+        echo "Waiting for Postgres Pod to be created..."
+
+        # 1. Loop until the Pod exists (Max 20 retries * 5 seconds = 100s)
+        ATTEMPTS=0
+        until kubectl get pod -l role=primary,cnpg.io/cluster=app-db -n default -o jsonpath='{.items[0].metadata.name}' >/dev/null 2>&1; do
+            if [ $ATTEMPTS -ge 20 ]; then
+                echo "Timeout waiting for pod creation"
+                exit 1
+            fi
+            echo "Pod not found yet... waiting 5s"
+            sleep 5
+            ATTEMPTS=$((ATTEMPTS+1))
+        done
+        # 2. Wait for DB to be ready
+        kubectl wait --for=condition=Ready pod -l role=primary,cnpg.io/cluster=app-db -n default --timeout=300s
+
+        # 3. Get Pod Name
+        PG_POD=$(kubectl get pods -l role=primary,cnpg.io/cluster=app-db -n default -o jsonpath='{.items[0].metadata.name}')
+
+        # 4. Restore
+        kubectl exec -i -n default ${PG_POD} -- psql -U postgres -d app < /tmp/backup.sql
+      register: db_restore_result
+      ignore_errors: yes
+
+    # --- 11. NAMESPACE ---
+    - name: Create Application Cloudflare
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', 'cloudflared.yaml') }}"
+
+    - name: Final Summary
+      ansible.builtin.debug:
+        msg:
+          - "-----------------------------------------"
+          - "🎉 Deployment Complete!"
+          - "Postgres NodePort: 30432"
+          - "-----------------------------------------"

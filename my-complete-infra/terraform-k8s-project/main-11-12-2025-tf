@@ -351,7 +351,7 @@ module "k8s_master" {
   source            = "./modules/k8s_node"
   ami_id            = "ami-087d1c9a513324697"   # Ubuntu 22.04 (Mumbai)
   instance_type     = "t3.medium"
-  server_name       = "master"
+  server_name       = "K8s-Master"
   key_name          = "flask-key"                # <--- REPLACE with your actual Key Name
   security_group_id = aws_security_group.k8s_cluster_sg.id
 }
@@ -360,9 +360,8 @@ module "k8s_master" {
 module "k8s_worker" {
   source            = "./modules/k8s_node"
   ami_id            = "ami-087d1c9a513324697"   # Ubuntu 22.04 (Mumbai)
-  count             = 2 
   instance_type     = "t3.medium"
-  server_name       = "worker-${count.index}"
+  server_name       = "K8s-Worker"
   key_name          = "flask-key"                # <--- REPLACE with your actual Key Name
   security_group_id = aws_security_group.k8s_cluster_sg.id
 }
@@ -370,23 +369,12 @@ module "k8s_worker" {
 
 # This generates the inventory.ini file automatically!
 resource "local_file" "ansible_inventory" {
-  filename = "../cluster_setup/inventory.ini"
-  content = <<-EOT
+  content = <<EOT
 [master]
-#${module.k8s_master.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=./flask-key.pem
-master-node ansible_host=${module.k8s_master.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=./flask-key.pem
+${module.k8s_master.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=./flask-key.pem
 
 [workers]
-# Worker IPs (Dynamically generated using a loop):
-${
-  join("\n", [
-    for i in range(length(module.k8s_worker)) : 
-    "worker-${i} ansible_host=${module.k8s_worker[i].public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=./flask-key.pem"
-  ])
-}
-
-[k8s_cluster:children]
-master
-workers
+${module.k8s_worker.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=./flask-key.pem
   EOT
+  filename = "../cluster_setup/inventory.ini"
 }
