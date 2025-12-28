@@ -1,10 +1,15 @@
-# Ignore everything
-*
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
 
-# Allow only infra folder
-!my-complete-infra/
-!my-complete-infra/**
+# Secrets / keys
+*.pem
+*.key
 
-# Allow gitignore itself
-!.gitignore
+# Python / app artifacts (optional safety)
+__pycache__/
+*.pyc
 
