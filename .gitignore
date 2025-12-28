@@ -1,0 +1,10 @@
+# Ignore everything
+*
+
+# Allow only infra folder
+!my-complete-infra/
+!my-complete-infra/**
+
+# Allow gitignore itself
+!.gitignore
+
