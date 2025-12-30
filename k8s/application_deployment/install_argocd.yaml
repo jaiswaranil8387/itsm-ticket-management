@@ -72,6 +72,13 @@
             destination:
               server: https://kubernetes.default.svc
               namespace: ticketing-app
+
+            # ignoreDifferences:
+            # - group: apps
+            #   kind: Deployment
+            #   jsonPointers:
+            #   - /spec/replicas
+
             syncPolicy:
               automated:
                 prune: true
