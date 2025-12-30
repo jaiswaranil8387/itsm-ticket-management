@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tcp-services
+  namespace: ingress-nginx  # Verify your ingress is in this namespace
+data:
+  # External Port : "Namespace/Service:InternalPort"
+  "5432": "default/app-db-rw:5432"
