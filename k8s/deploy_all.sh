@@ -54,4 +54,17 @@ echo "PHASE 3: Post-Deployment Configuration (DB & Secrets)..."
 echo "----------------------------------------------------"
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini deploy_secrets_and_dbbackup.yaml
 
+echo "----------------------------------------------------"
+echo "PHASE 4: Installing Observability Stack..."
+echo "----------------------------------------------------"
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini install_observability.yaml
+
+echo "Waiting 60 seconds for Monitoring/Logging pods to start..."
+sleep 60
+
+echo "----------------------------------------------------"
+echo "PHASE 5: Configuring Observability (Secrets & Glue)..."
+echo "----------------------------------------------------"
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini configure_observability.yaml
+
 echo "🎉 DEPLOYMENT COMPLETE!"

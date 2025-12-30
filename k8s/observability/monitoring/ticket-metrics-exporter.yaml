@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ticket-sql-queries
+  namespace: monitoring
+  labels:
+    release: monitoring
+data:
+  queries.yaml: |
+    # This is the SQL query Prometheus will run
+    pg_ticket_stats:
+      query: "SELECT status, count(*) as count FROM tickets GROUP BY status;"
+      metrics:
+        - status:
+            usage: "LABEL"       # This becomes a filter (e.g., {status="Open"})
+            description: "Current status of the ticket"
+        - count:
+            usage: "GAUGE"       # This is the number (e.g., 5)
+            description: "Number of tickets in this status"
+    pg_priority_stats:
+      query: "SELECT priority, count(1) as count FROM tickets GROUP BY priority;"
+      metrics:
+        - priority:
+            usage: "LABEL"
+            description: "Priority level of the ticket"
+        - count:
+            usage: "GAUGE"
+            description: "Count of tickets in this priority"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticket-stats-exporter
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: ticket-stats-exporter
+  template:
+    metadata:
+      labels:
+        app: ticket-stats-exporter
+        release: monitoring
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+    spec:
+      containers:
+      - name: exporter
+        # The standard Postgres Exporter image
+        image: prometheuscommunity/postgres-exporter:v0.18.1
+        ports:
+        - containerPort: 9187
+        volumeMounts:
+        - name: queries
+          mountPath: /etc/config
+        args:
+          - "--no-collector.wal"
+          - "--no-collector.process_idle"
+          - "--no-collector.stat_bgwriter"
+        env:
+        # Connection details
+        - name: DATA_SOURCE_URI
+          value: "app-db-rw.default.svc.cluster.local:5432/app?sslmode=disable"
+        - name: DATA_SOURCE_USER
+          value: "app"
+        - name: DATA_SOURCE_PASS
+          valueFrom:
+            secretKeyRef:
+              name: app-db-app
+              key: password
+        # Tell exporter where to find our SQL query
+        - name: PG_EXPORTER_EXTEND_QUERY_PATH
+          value: "/etc/config/queries.yaml"
+      volumes:
+      - name: queries
+        configMap:
+          name: ticket-sql-queries

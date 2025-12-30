@@ -1,0 +1,29 @@
+---
+- name: Phase 4 - Install Observability Stack (Argo CD)
+  hosts: master
+  become: no
+  environment:
+    KUBECONFIG: /home/ubuntu/.kube/config
+
+  tasks:
+    - name: 1. Apply Observability Applications
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', 'observability-apps.yaml') }}"
+
+    - name: 2. Wait for Monitoring Namespace
+      shell: "kubectl get ns monitoring"
+      register: ns_check
+      until: ns_check.rc == 0
+      retries: 20
+      delay: 5
+
+    - name: 3. Wait for Logging Namespace
+      shell: "kubectl get ns logging"
+      register: log_check
+      until: log_check.rc == 0
+      retries: 20
+      delay: 5
+
+    - debug:
+        msg: "Argo CD is now deploying Prometheus, Grafana, EFK, and Jaeger!"

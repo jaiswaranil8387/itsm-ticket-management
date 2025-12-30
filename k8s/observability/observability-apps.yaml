@@ -1,0 +1,95 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-stack
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    # 1. Upstream Helm Chart
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 45.7.1 # Pin a stable version
+      helm:
+        valueFiles:
+          - $values/k8s/observability/monitor-values.yaml
+    # 2. Your Git Repo (for the values file)
+    - repoURL: https://github.com/jaiswaranil8387/itsm-ticket-management.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: blackbox-exporter
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: prometheus-blackbox-exporter
+    targetRevision: 7.0.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-configs
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jaiswaranil8387/itsm-ticket-management.git
+    targetRevision: HEAD
+    path: k8s/observability/monitoring
+    # Only include raw YAMLs, ignore the old ansible scripts if they are still there
+    directory:
+      exclude: '*.yml' 
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: logging-stack
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jaiswaranil8387/itsm-ticket-management.git
+    targetRevision: HEAD
+    path: k8s/observability/logging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: logging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
