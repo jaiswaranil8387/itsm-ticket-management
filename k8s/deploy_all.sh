@@ -57,6 +57,7 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.i
 echo "----------------------------------------------------"
 echo "PHASE 4: Installing Observability Stack..."
 echo "----------------------------------------------------"
+cd /home/ubuntu/k8s/observability
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini install_observability.yaml
 
 echo "Waiting 60 seconds for Monitoring/Logging pods to start..."
