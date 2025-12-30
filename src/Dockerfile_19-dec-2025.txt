@@ -1,0 +1,57 @@
+# ========================
+# 1st stage: Builder
+# ========================
+FROM python:3.11-slim-bookworm AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install build tool
+RUN pip install uv
+
+# Copy requirements and install dependencies
+# (We install into .venv so we can copy it easily later)
+COPY requirements.txt .
+RUN uv venv .venv \
+    && uv pip install --python .venv/bin/python -r requirements.txt
+
+# Copy source code
+COPY . .
+
+# ============================
+# 2nd stage: Runtime
+# ============================
+FROM python:3.11-slim-bookworm
+
+WORKDIR /app
+
+# Install PostgreSQL client libraries (REQUIRED for psycopg2)
+# We also install curl if you ever need it for debugging, 
+# though your python healthcheck doesn't strictly need it.
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy application from builder
+COPY --from=builder /app .
+
+# Copy installed python packages
+# We copy to the standard python path so we don't need complex PYTHONPATH env vars
+COPY --from=builder /app/.venv/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+
+# --- YOUR PREFERRED STYLE ---
+# Using python3 is safer than hardcoding /usr/bin/python3.11 in slim images
+# but we keep your absolute path structure for the script.
+ENTRYPOINT ["python3"]
+
+# Absolute path as requested
+CMD ["/app/app.py"]
+
+# Your clean Healthcheck (Ensure healthcheck.py exists!)
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD ["python3", "/app/healthcheck.py"]
+
+EXPOSE 5000

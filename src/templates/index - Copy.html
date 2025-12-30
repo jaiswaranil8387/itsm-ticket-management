@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Helpdesk Ticketing System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { max-width: 1200px; margin-top: 20px; }
+        .header { background-color: #003087; color: white; padding: 15px; text-align: center; border-radius: 5px; }
+        .ticket-table th { background-color: #e9ecef; }
+        .priority-high { color: red; font-weight: bold; }
+        .priority-medium { color: orange; font-weight: bold; }
+        .priority-low { color: green; font-weight: bold; }
+        .status-open { color: blue; }
+        .status-in-progress { color: purple; }
+        .status-resolved { color: green; }
+        .search-bar { max-width: 400px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>IT Helpdesk Ticketing System</h1>
+            <p>Manage and resolve user queries efficiently</p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-bar mt-4">
+            <form action="{{ url_for('index') }}" method="POST" class="d-flex">
+                <input type="text" class="form-control me-2" name="search_query" placeholder="Search tickets by title" value="{{ search_query }}">
+                <button type="submit" class="btn btn-primary">Search</button>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary ms-2">Clear</a>
+            </form>
+        </div>
+
+        <!-- Ticket Creation Form -->
+        <div class="card mt-4">
+            <div class="card-header">Create New Ticket</div>
+            <div class="card-body">
+                <form action="{{ url_for('add_ticket_route') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Ticket Title</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">Priority</label>
+                        <select class="form-select" id="priority" name="priority" required>
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Ticket</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mt-3" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Ticket Table -->
+        <div class="card mt-4">
+            <div class="card-header">Tickets</div>
+            <div class="card-body">
+                <table class="table table-striped ticket-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Created At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in tickets %}
+                            <tr>
+                                <td>{{ ticket[0] }}</td>
+                                <td>{{ ticket[1] }}</td>
+                                <td>{{ ticket[2] }}</td>
+                                <td class="priority-{{ ticket[3].lower() }}">{{ ticket[3] }}</td>
+                                <td class="status-{{ ticket[4].lower().replace(' ', '-') }}">{{ ticket[4] }}</td>
+                                <td>{{ ticket[5] }}</td>
+                                <td>
+                                    <a href="{{ url_for('update_status_route', ticket_id=ticket[0], status='Open') }}" class="btn btn-sm btn-outline-primary">Open</a>
+                                    <a href="{{ url_for('update_status_route', ticket_id=ticket[0], status='In Progress') }}" class="btn btn-sm btn-outline-warning">In Progress</a>
+                                    <a href="{{ url_for('update_status_route', ticket_id=ticket[0], status='Resolved') }}" class="btn btn-sm btn-outline-success">Resolved</a>
+                                    <a href="{{ url_for('edit_ticket_route', ticket_id=ticket[0]) }}" class="btn btn-sm btn-outline-info">Edit</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Edit Ticket Modal -->
+        <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalLabel">Edit Ticket</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editForm" action="" method="POST">
+                            <div class="mb-3">
+                                <label for="edit_title" class="form-label">Ticket Title</label>
+                                <input type="text" class="form-control" id="edit_title" name="title" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_description" class="form-label">Description</label>
+                                <textarea class="form-control" id="edit_description" name="description" rows="4" required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_priority" class="form-label">Priority</label>
+                                <select class="form-select" id="edit_priority" name="priority" required>
+                                    <option value="High">High</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Low">Low</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Dynamically set the form action and pre-fill fields when edit button is clicked
+            document.querySelectorAll('.btn-outline-info').forEach(button => {
+                button.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const ticketId = this.getAttribute('href').split('/').pop();
+                    const row = this.closest('tr');
+                    const title = row.cells[1].textContent;
+                    const description = row.cells[2].textContent;
+                    const priority = row.cells[3].textContent;
+
+                    // Set form action
+                    const form = document.getElementById('editForm');
+                    form.action = `/edit_ticket/${ticketId}`;
+
+                    // Pre-fill form fields
+                    document.getElementById('edit_title').value = title;
+                    document.getElementById('edit_description').value = description;
+                    document.getElementById('edit_priority').value = priority;
+
+                    // Update modal title
+                    document.getElementById('editModalLabel').textContent = `Edit Ticket #${ticketId}`;
+
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('editModal'));
+                    modal.show();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

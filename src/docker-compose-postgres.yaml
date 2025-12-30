@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # 1. JAEGER - The Trace Backend
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"   # The UI (http://localhost:16686)
+      - "4317:4317"     # OTLP Receiver (gRPC)
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  # 2. YOUR APPLICATION
+  ticketing-app:
+    build: .
+    # Note: Ensure this tag matches what you build locally
+    image: jaiswaranil8387/anil_doc_repo:v6
+    container_name: ticketing-app
+    init: true
+    ports:
+      - "5000:5000"
+    
+    # --- COMMAND UPDATED ---
+    # We use environment variables for config to keep this clean.
+    # We just tell it to instrument "python app.py"
+
+    entrypoint: /bin/sh
+    command: >
+      -c ". .venv/bin/activate &&
+        opentelemetry-instrument python app.py"
+
+    # Environment variables
+    environment:
+      - FLASK_ENV=development
+      
+      # Database Config (Your Remote IPs)
+      - DB_HOST=db-access
+      - DB_PORT=5432
+      - DB_NAME=app
+      - DB_USER=app
+      - DB_PASSWORD=924LhctkhAbZxmqz7NB8X5esMJ1pdDYOVhzRBdWz5Agt5gjEziHEemlficH5xqcb
+      - PGSSLMODE=disable
+
+      # --- OTel Configuration (The Clean Way) ---
+      - OTEL_SERVICE_NAME=ticketing-app
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=none
+      # Point to the Jaeger service we defined above
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      # Enable Log Correlation (Links logs to traces)
+      - OTEL_PYTHON_LOG_CORRELATION=true
+    
+    depends_on:
+      - jaeger
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health').getcode())"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiYzcxMWQyOWM1ODQyNTFkOTQ0NjZkNGI5OTc5Mjk4OWIiLCJ0IjoiODg4MDIyZTMtNDE0Yy00NjJkLWI2MGItOGQxZTc3Njg4MDJmIiwicyI6Ik5Ua3dOV1JqTmpRdFpESTFaUzAwT1RRMkxXSTNNVE10WVdNM1pUZzNaamRrTTJWbSJ9
+
+  db-access:
+    image: cloudflare/cloudflared:latest
+    container_name: db-access-client
+    restart: unless-stopped
+    # This command creates a TCP listener locally that forwards to your domain
+    command: access tcp --hostname ticketingdb.aniljaiswar.pp.ua --url tcp://0.0.0.0:5432

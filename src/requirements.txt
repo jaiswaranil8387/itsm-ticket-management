@@ -1,0 +1,11 @@
+Flask==2.0.2
+Werkzeug==2.3.7 
+psycopg2-binary==2.9.9
+python-json-logger
+opentelemetry-distro
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation
+opentelemetry-instrumentation-requests
+opentelemetry-instrumentation-flask
+opentelemetry-instrumentation-psycopg2
+opentelemetry-instrumentation-logging

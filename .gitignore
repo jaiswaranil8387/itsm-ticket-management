@@ -10,6 +10,22 @@
 *.key
 
 # Python / app artifacts (optional safety)
+.venv/
 __pycache__/
 *.pyc
+*.py
+*.toml
+uv.lock
+tickets.db
 
+# App backups / versions
+app_*
+main.py
+
+#Include Dockerfiles
+!.dockerignore
+!Dockerfile
+!docker-compose-postgres.yaml
+!DOCKER_README.md
+!README.md
+!requirements.txt
