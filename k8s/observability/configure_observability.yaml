@@ -89,20 +89,23 @@
     # ====================================================================
     # STEP 4: KIBANA CONFIGURATION
     # ====================================================================
-    - name: 4a. Wait for Kibana Pod
-      shell: "kubectl wait --namespace {{ logging_ns }} --for=condition=ready pod --selector=app=kibana --timeout=300s"
+    - name: 4a. Wait for Elasticsearch to be Ready
+      kubernetes.core.k8s_info:
+        kind: Pod
+        name: es-cluster-0
+        namespace: logging
+      register: es_pod_status
+      until: es_pod_status.resources[0].status.phase == 'Running'
+      retries: 20
+      delay: 15
+
+    # --- NEW TASK: Wait for Kibana to be fully Ready ---
+    - name: 4b. Wait for Kibana to be Ready (Required for API calls)
+      ansible.builtin.shell:
+        cmd: "kubectl wait --namespace logging --for=condition=ready pod --selector=app=kibana --timeout=300s"
+      register: kibana_wait
       changed_when: false
 
-    - name: 4b. Wait for Kibana API (HTTP 200)
-      shell: |
-        kubectl run curl-check --image=curlimages/curl --restart=Never --rm -i -- \
-          curl -s -o /dev/null -w "%{http_code}" http://kibana.logging.svc.cluster.local:5601/api/status
-      register: api_check
-      until: api_check.stdout == "200"
-      retries: 20
-      delay: 10
-      changed_when: false
-      ignore_errors: yes 
 
     - name: 4c. Create 'logstash-*' Index Pattern
       shell: |
