@@ -39,12 +39,12 @@ echo "----------------------------------------------------"
 echo "PHASE 1: Deploy Controllers and Operators..."
 echo "----------------------------------------------------"
 cd /home/ubuntu/k8s/application_deployment
-ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini deploy_controllers_and_operators.yaml
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini deploy_controllers_and_operators.yaml --extra-vars "confirm=yes"
 
 echo "----------------------------------------------------"
 echo "PHASE 2: Installing Argo CD & Deploying App..."
 echo "----------------------------------------------------"
-ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini install_argocd.yaml
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini install_argocd.yaml --extra-vars "confirm=yes"
 
 echo "Waiting 45 seconds for Argo CD to initialize resources..."
 sleep 45
@@ -52,13 +52,15 @@ sleep 45
 echo "----------------------------------------------------"
 echo "PHASE 3: Post-Deployment Configuration (DB & Secrets)..."
 echo "----------------------------------------------------"
-ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini deploy_secrets_and_dbbackup.yaml
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini deploy_secrets_and_dbbackup.yaml --extra-vars "confirm=yes"
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini validate_cluster.yml --extra-vars "confirm=yes"
+
 
 echo "----------------------------------------------------"
 echo "PHASE 4: Installing Observability Stack..."
 echo "----------------------------------------------------"
 cd /home/ubuntu/k8s/observability
-ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini install_observability.yaml
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini install_observability.yaml --extra-vars "confirm=yes"
 
 echo "Waiting 60 seconds for Monitoring/Logging pods to start..."
 sleep 60
@@ -66,6 +68,6 @@ sleep 60
 echo "----------------------------------------------------"
 echo "PHASE 5: Configuring Observability (Secrets & Glue)..."
 echo "----------------------------------------------------"
-ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini configure_observability.yaml
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini configure_observability.yaml --extra-vars "confirm=yes"
 
 echo "🎉 DEPLOYMENT COMPLETE!"

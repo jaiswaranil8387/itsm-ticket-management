@@ -33,11 +33,11 @@ spec:
                 topologyKey: "kubernetes.io/hostname"
       containers:
         - name: ticketing-app
-          image: jaiswaranil8387/anil_doc_repo:v3
+          image: jaiswaranil8387/anil_doc_repo:v5
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
-          
+
           # ======================================================
           # NEW SECTION: Database Connection Settings
           # ======================================================
@@ -45,15 +45,15 @@ spec:
             # 1. Hostname: Uses Full DNS to reach DB in 'default' namespace
             - name: DB_HOST
               value: "app-db-rw.default.svc.cluster.local"
-            
+
             # 2. Database Name (from your CNPG setup)
             - name: DB_NAME
               value: "app"
-            
+
             # 3. User (from your CNPG setup)
             - name: DB_USER
               value: "app"
-            
+
             # 4. Disable SSL: Prevents "Certificate Verify Failed" errors
             #    (Safe here because traffic stays inside the cluster)
             - name: PGSSLMODE
@@ -65,6 +65,19 @@ spec:
                 secretKeyRef:
                   name: app-db-app
                   key: password
+            # --- OpenTelemetry Config ---
+            - name: OTEL_SERVICE_NAME
+              value: "ticketing-app-k8s"
+            # Pointing to the Jaeger service in the 'logging' namespace
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://jaeger.logging.svc.cluster.local:4317"
+            # Ensure we use GRPC
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
           # ======================================================
 
           resources:

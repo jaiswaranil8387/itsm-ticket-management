@@ -26,6 +26,8 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
+      - PruneLast=true
 
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -48,6 +50,8 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
+      - PruneLast=true
 
 ---
 apiVersion: argoproj.io/v1alpha1
