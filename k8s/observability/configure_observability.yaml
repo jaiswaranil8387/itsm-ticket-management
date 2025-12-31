@@ -138,3 +138,20 @@
         - kibana_index_result.rc != 0
         - "'409' not in kibana_index_result.stdout"
       changed_when: "'200' in kibana_index_result.stdout"
+
+    - name: 4d. Set Default Index Pattern to 'logstash-*'
+      shell: |
+        kubectl run set-default-index --image=curlimages/curl --restart=Never --rm -i -- \
+          curl -X POST "http://kibana.logging.svc.cluster.local:5601/api/kibana/settings" \
+          -H "kbn-xsrf: true" \
+          -H "Content-Type: application/json" \
+          -d '{"changes": {"defaultIndex": "logstash-pattern"}}'
+      register: default_index_result
+      changed_when: "'200' in default_index_result.stdout"
+      failed_when: default_index_result.rc != 0
+
+    - name: Final Summary
+      debug:
+        msg: 
+          - "🎉 Observability Configuration Complete!"
+          - "Kibana Default Index Set. You can now open 'Discover' without prompts."
