@@ -5,7 +5,7 @@ metadata:
   namespace: monitoring
   labels:
     app: ticket-stats-exporter
-    release: monitoring
+    release: prometheus-stack
 spec:
   selector:
     app: ticket-stats-exporter

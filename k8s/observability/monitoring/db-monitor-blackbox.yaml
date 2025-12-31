@@ -4,7 +4,7 @@ metadata:
   name: postgres-health-check
   namespace: monitoring
   labels:
-    release: monitoring  # Must match your Prometheus label (you said you use 'monitoring')
+    release: prometheus-stack  # Must match your Prometheus label (you said you use 'monitoring')
 spec:
   jobName: postgres-health
   prober:

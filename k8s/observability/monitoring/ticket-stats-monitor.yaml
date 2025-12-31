@@ -4,7 +4,7 @@ metadata:
   name: ticket-stats-monitor
   namespace: monitoring
   labels:
-    release: monitoring  # MUST match your Prometheus release label
+    release: prometheus-stack  # MUST match your Prometheus release label
 spec:
   selector:
     matchLabels:

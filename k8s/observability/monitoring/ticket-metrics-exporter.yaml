@@ -4,7 +4,7 @@ metadata:
   name: ticket-sql-queries
   namespace: monitoring
   labels:
-    release: monitoring
+    release: prometheus-stack
 data:
   queries.yaml: |
     # This is the SQL query Prometheus will run
@@ -33,7 +33,7 @@ metadata:
   name: ticket-stats-exporter
   namespace: monitoring
   labels:
-    release: monitoring
+    release: prometheus-stack
 spec:
   selector:
     matchLabels:
@@ -42,7 +42,7 @@ spec:
     metadata:
       labels:
         app: ticket-stats-exporter
-        release: monitoring
+        release: prometheus-stack
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9187"

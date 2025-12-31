@@ -4,7 +4,7 @@ metadata:
   name: ticketing-app-health-check
   namespace: monitoring  # Must be where your Prometheus Operator is running
   labels:
-    release: monitoring  # IMPORTANT: Match your Prometheus instance label
+    release: prometheus-stack  # IMPORTANT: Match your Prometheus instance label
 spec:
   jobName: ticketing-app-health
   prober:
