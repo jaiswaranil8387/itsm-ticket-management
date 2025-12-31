@@ -11,17 +11,23 @@
         state: present
         definition: "{{ lookup('file', 'observability-apps.yaml') }}"
 
+    # --- FIXED: FORCE SYNC USING ANNOTATIONS (Universal Fix) ---
+    # This fixes the "repoURL required" error by using annotations instead of spec patching
+    
     - name: 2. Force Sync Blackbox Exporter
       ansible.builtin.shell:
-        cmd: "kubectl patch application blackbox-exporter -n argocd --type merge -p '{\"spec\": {\"source\": {\"targetRevision\": \"HEAD\"}}}'"
+        cmd: "kubectl patch application blackbox -n argocd --type merge -p '{\"metadata\": {\"annotations\": {\"argocd.argoproj.io/refresh\": \"hard\"}}}'"
       register: bb_sync
       changed_when: "'patched' in bb_sync.stdout"
+      ignore_errors: yes
 
     - name: 3. Force Sync Prometheus Stack
       ansible.builtin.shell:
-        cmd: "kubectl patch application prometheus-stack -n argocd --type merge -p '{\"spec\": {\"source\": {\"targetRevision\": \"HEAD\"}}}'"
+        cmd: "kubectl patch application prometheus-stack -n argocd --type merge -p '{\"metadata\": {\"annotations\": {\"argocd.argoproj.io/refresh\": \"hard\"}}}'"
       register: prom_sync
       changed_when: "'patched' in prom_sync.stdout"
+      ignore_errors: yes
+    # -----------------------------------------------------------
 
     - name: 4. Wait for Monitoring Namespace
       shell: "kubectl get ns monitoring"
@@ -38,4 +44,4 @@
       delay: 5
 
     - debug:
-        msg: "Argo CD is now deploying Prometheus, Grafana, EFK, and Jaeger!"
+        msg: "Argo CD apps applied and Sync Triggered."

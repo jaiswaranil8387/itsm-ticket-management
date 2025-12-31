@@ -10,14 +10,14 @@
 
   tasks:
     # --------------------------------------------------
-    # Step 1: Wait & Patch Blackbox
+    # Step 1: Wait & Patch Blackbox (Robust)
     # --------------------------------------------------
     
     # 1. INTELLIGENT WAIT: Don't fail, wait for Argo CD to finish deploying
     - name: 1a. Wait for Blackbox ConfigMap to exist
       ansible.builtin.shell: |
-        # Search for any configmap with 'blackbox' in the name
-        kubectl get configmaps -n {{ monitoring_ns }} | grep blackbox-exporter | awk '{print $1}'
+        # Search for any configmap with 'blackbox' in the name and return the FIRST one found
+        kubectl get configmaps -n {{ monitoring_ns }} | grep blackbox | awk '{print $1}' | head -n 1
       register: blackbox_cm_check
       until: blackbox_cm_check.stdout != ""
       retries: 20   # Wait up to 100 seconds

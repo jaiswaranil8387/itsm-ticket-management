@@ -33,7 +33,7 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: blackbox-exporter
+  name: blackbox
   namespace: argocd
 spec:
   project: default
