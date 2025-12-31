@@ -71,6 +71,25 @@
       register: secret_copy
       changed_when: "'created' in secret_copy.stdout or 'configured' in secret_copy.stdout"
 
+    # --------------------------------------------------
+    # Step 2a: Import Custom Grafana Dashboard (FIXED)
+    # --------------------------------------------------
+    - name: Create ConfigMap for Custom Dashboard
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: custom-app-dashboard
+            namespace: "{{ monitoring_ns }}"
+            labels:
+              # This label tells the Grafana Sidecar to load this map
+              grafana_dashboard: "1"
+          data:
+            # FIX: We pipe to 'from_yaml' then 'to_json' to ensure it is sent as a STRING, not an Object.
+            app-dashboard.json: "{{ lookup('file', playbook_dir + '/dashboard-monitoring.yaml') | from_yaml | to_json }}"
+
     # ====================================================================
     # STEP 3: EFK LOGGING STACK
     # ====================================================================
