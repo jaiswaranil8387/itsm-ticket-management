@@ -9,7 +9,7 @@ spec:
     # 1. Upstream Helm Chart
     - repoURL: https://prometheus-community.github.io/helm-charts
       chart: kube-prometheus-stack
-      targetRevision: 45.7.1 # Pin a stable version
+      targetRevision: 79.8.2 # Pin a stable version
       helm:
         valueFiles:
           - $values/k8s/observability/monitor-values.yaml
@@ -40,7 +40,7 @@ spec:
   source:
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: prometheus-blackbox-exporter
-    targetRevision: 7.0.0
+    targetRevision: 11.5.0
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
