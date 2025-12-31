@@ -10,13 +10,34 @@
 
   tasks:
     # --------------------------------------------------
-    # Step 1: Patch Blackbox ConfigMap for TCP
+    # Step 1: Wait & Patch Blackbox
     # --------------------------------------------------
-    - name: Patch blackbox configmap with TCP probe
+    
+    # 1. INTELLIGENT WAIT: Don't fail, wait for Argo CD to finish deploying
+    - name: 1a. Wait for Blackbox ConfigMap to exist
+      ansible.builtin.shell: |
+        # Search for any configmap with 'blackbox' in the name
+        kubectl get configmaps -n {{ monitoring_ns }} | grep blackbox-exporter | awk '{print $1}'
+      register: blackbox_cm_check
+      until: blackbox_cm_check.stdout != ""
+      retries: 20   # Wait up to 100 seconds
+      delay: 5
+      changed_when: false
+
+    # 2. Capture the exact name found
+    - name: 1b. Set ConfigMap Name Variable
+      set_fact:
+        real_cm_name: "{{ blackbox_cm_check.stdout }}"
+
+    - debug:
+        msg: "Found ConfigMap: {{ real_cm_name }}. Proceeding to patch."
+
+    # 3. Patch using the found name
+    - name: 1c. Patch blackbox configmap with TCP probe
       kubernetes.core.k8s:
         state: patched
         kind: ConfigMap
-        name: blackbox-prometheus-blackbox-exporter
+        name: "{{ real_cm_name }}"
         namespace: "{{ monitoring_ns }}"
         merge_type: merge
         definition:
@@ -53,55 +74,45 @@
     # ====================================================================
     # STEP 3: EFK LOGGING STACK
     # ====================================================================
-    - name: 3a. Check if metrics-server deployment exists
-      ansible.builtin.shell: |
-        kubectl get deployment metrics-server -n kube-system
-      register: metrics_server_check
+    - name: 3a. Check if metrics-server exists
+      shell: "kubectl get deployment metrics-server -n kube-system"
+      register: metrics_check
       failed_when: false
       changed_when: false
 
-    - name: 3b. Patch Metrics Server (Stop certificate verification spam)
-      ansible.builtin.shell: |
+    - name: 3b. Patch Metrics Server
+      shell: |
         kubectl patch deployment metrics-server -n kube-system --type='json' \
           -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
-      when: metrics_server_check.rc == 0
+      when: metrics_check.rc == 0
 
     # ====================================================================
     # STEP 4: KIBANA CONFIGURATION
     # ====================================================================
-
-    - name: 4a. Wait for Elasticsearch to be Ready
-      kubernetes.core.k8s_info:
-        kind: Pod
-        name: es-cluster-0
-        namespace: logging
-      register: es_pod_status
-      until: es_pod_status.resources[0].status.phase == 'Running'
-      retries: 20
-      delay: 15
-
-    # --- NEW TASK: Wait for Kibana to be fully Ready ---
-    - name: 4b. Wait for Kibana to be Ready (Required for API calls)
-      ansible.builtin.shell:
-        cmd: "kubectl wait --namespace logging --for=condition=ready pod --selector=app=kibana --timeout=300s"
-      register: kibana_wait
+    - name: 4a. Wait for Kibana Pod
+      shell: "kubectl wait --namespace {{ logging_ns }} --for=condition=ready pod --selector=app=kibana --timeout=300s"
       changed_when: false
 
-    # --- UPDATED TASK: Added Retry Logic ---
-    - name: 4c. Create 'logstash-*' Index Pattern in Kibana
-      command: >
-        kubectl exec -n logging es-cluster-0 -- 
-        curl -X POST "http://kibana.logging.svc.cluster.local:5601/api/saved_objects/index-pattern/logstash-pattern"
-        -H "kbn-xsrf: true"
-        -H "Content-Type: application/json"
-        -d '{"attributes": {"title": "logstash-*", "timeFieldName": "@timestamp"}}'
-      register: kibana_index_result
-      # Retry logic: Try 10 times, wait 10s between tries (Total ~100s buffer)
-      until: kibana_index_result.rc == 0 or '409' in kibana_index_result.stdout
-      retries: 10
+    - name: 4b. Wait for Kibana API (HTTP 200)
+      shell: |
+        kubectl run curl-check --image=curlimages/curl --restart=Never --rm -i -- \
+          curl -s -o /dev/null -w "%{http_code}" http://kibana.logging.svc.cluster.local:5601/api/status
+      register: api_check
+      until: api_check.stdout == "200"
+      retries: 20
       delay: 10
-      # Success/Fail Conditions
-      changed_when: "'200' in kibana_index_result.stdout"
+      changed_when: false
+      ignore_errors: yes 
+
+    - name: 4c. Create 'logstash-*' Index Pattern
+      shell: |
+        kubectl run create-index --image=curlimages/curl --restart=Never --rm -i -- \
+          curl -X POST "http://kibana.logging.svc.cluster.local:5601/api/saved_objects/index-pattern/logstash-pattern" \
+          -H "kbn-xsrf: true" \
+          -H "Content-Type: application/json" \
+          -d '{"attributes": {"title": "logstash-*", "timeFieldName": "@timestamp"}}'
+      register: kibana_index_result
       failed_when: 
         - kibana_index_result.rc != 0
         - "'409' not in kibana_index_result.stdout"
+      changed_when: "'200' in kibana_index_result.stdout"
