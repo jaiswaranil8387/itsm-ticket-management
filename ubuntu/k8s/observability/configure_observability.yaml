@@ -1,0 +1,159 @@
+---
+- name: Phase 5 - Configure Observability (Secrets & Patches)
+  hosts: master
+  become: no
+  environment:
+    KUBECONFIG: /home/ubuntu/.kube/config
+  vars:
+    monitoring_ns: monitoring
+    logging_ns: logging
+
+  tasks:
+    # --------------------------------------------------
+    # Step 1: Wait & Patch Blackbox (Robust)
+    # --------------------------------------------------
+    
+    # 1. INTELLIGENT WAIT: Don't fail, wait for Argo CD to finish deploying
+    - name: 1a. Wait for Blackbox ConfigMap to exist
+      ansible.builtin.shell: |
+        # Search for any configmap with 'blackbox' in the name and return the FIRST one found
+        kubectl get configmaps -n {{ monitoring_ns }} | grep blackbox | awk '{print $1}' | head -n 1
+      register: blackbox_cm_check
+      until: blackbox_cm_check.stdout != ""
+      retries: 20   # Wait up to 100 seconds
+      delay: 5
+      changed_when: false
+
+    # 2. Capture the exact name found
+    - name: 1b. Set ConfigMap Name Variable
+      set_fact:
+        real_cm_name: "{{ blackbox_cm_check.stdout }}"
+
+    - debug:
+        msg: "Found ConfigMap: {{ real_cm_name }}. Proceeding to patch."
+
+    # 3. Patch using the found name
+    - name: 1c. Patch blackbox configmap with TCP probe
+      kubernetes.core.k8s:
+        state: patched
+        kind: ConfigMap
+        name: "{{ real_cm_name }}"
+        namespace: "{{ monitoring_ns }}"
+        merge_type: merge
+        definition:
+          data:
+            blackbox.yml: |
+              modules:
+                tcp_connect:
+                  prober: tcp
+                  timeout: 5s
+
+    # --------------------------------------------------
+    # Step 2: Copy DB Secret
+    # --------------------------------------------------
+    - name: 2a. Install jq
+      become: yes
+      apt:
+        name: jq
+        state: present
+        update_cache: yes
+
+    - name: 2b. Copy DB Secret to Monitoring Namespace
+      ansible.builtin.shell: |
+        until kubectl get secret app-db-app -n default >/dev/null 2>&1; do 
+            echo "Waiting for secret in default namespace..."; 
+            sleep 5; 
+        done
+
+        kubectl get secret app-db-app -n default -o json | \
+        jq 'del(.metadata.ownerReferences, .metadata.uid, .metadata.resourceVersion, .metadata.creationTimestamp) | .metadata.namespace = "{{ monitoring_ns }}"' | \
+        kubectl apply -f -
+      register: secret_copy
+      changed_when: "'created' in secret_copy.stdout or 'configured' in secret_copy.stdout"
+
+    # --------------------------------------------------
+    # Step 2a: Import Custom Grafana Dashboard (FIXED)
+    # --------------------------------------------------
+    - name: Create ConfigMap for Custom Dashboard
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: custom-app-dashboard
+            namespace: "{{ monitoring_ns }}"
+            labels:
+              # This label tells the Grafana Sidecar to load this map
+              grafana_dashboard: "1"
+          data:
+            # FIX: We pipe to 'from_yaml' then 'to_json' to ensure it is sent as a STRING, not an Object.
+            app-dashboard.json: "{{ lookup('file', playbook_dir + '/dashboard-monitoring.yaml') | from_yaml | to_json }}"
+
+    # ====================================================================
+    # STEP 3: EFK LOGGING STACK
+    # ====================================================================
+    - name: 3a. Check if metrics-server exists
+      shell: "kubectl get deployment metrics-server -n kube-system"
+      register: metrics_check
+      failed_when: false
+      changed_when: false
+
+    - name: 3b. Patch Metrics Server
+      shell: |
+        kubectl patch deployment metrics-server -n kube-system --type='json' \
+          -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+      when: metrics_check.rc == 0
+
+    # ====================================================================
+    # STEP 4: KIBANA CONFIGURATION
+    # ====================================================================
+    - name: 4a. Wait for Elasticsearch to be Ready
+      kubernetes.core.k8s_info:
+        kind: Pod
+        name: es-cluster-0
+        namespace: logging
+      register: es_pod_status
+      until: es_pod_status.resources[0].status.phase == 'Running'
+      retries: 20
+      delay: 15
+
+    # --- NEW TASK: Wait for Kibana to be fully Ready ---
+    - name: 4b. Wait for Kibana to be Ready (Required for API calls)
+      ansible.builtin.shell:
+        cmd: "kubectl wait --namespace logging --for=condition=ready pod --selector=app=kibana --timeout=300s"
+      register: kibana_wait
+      changed_when: false
+
+
+    - name: 4c. Create 'logstash-*' Index Pattern
+      shell: |
+        kubectl run create-index --image=curlimages/curl --restart=Never --rm -i -- \
+          curl -s -X POST "http://kibana.logging.svc.cluster.local:5601/api/saved_objects/index-pattern/logstash-pattern" \
+          -H "kbn-xsrf: true" \
+          -H "Content-Type: application/json" \
+          -d '{"attributes": {"title": "logstash-*", "timeFieldName": "@timestamp"}}'
+      register: kibana_index_result
+      failed_when: 
+        - kibana_index_result.rc != 0
+        - "'409' not in kibana_index_result.stdout"
+      changed_when: "'200' in kibana_index_result.stdout"
+
+    - name: 4d. Set Default Index Pattern to 'logstash-*'
+      shell: |
+        kubectl run set-default-index --image=curlimages/curl --restart=Never --rm -i -- \
+          curl -s -X POST "http://kibana.logging.svc.cluster.local:5601/api/kibana/settings" \
+          -H "kbn-xsrf: true" \
+          -H "Content-Type: application/json" \
+          -d '{"changes": {"defaultIndex": "logstash-pattern"}}'
+      register: default_index_result
+      changed_when: "'200' in default_index_result.stdout"
+      failed_when: 
+        - default_index_result.rc != 0
+        - "'200' not in default_index_result.stdout"
+
+    - name: Final Summary
+      debug:
+        msg: 
+          - "🎉 Observability Configuration Complete!"
+          - "Kibana Default Index Set. You can now open 'Discover' without prompts."

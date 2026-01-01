@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  deployer:
+    build:
+      context: .
+      dockerfile: Dockerfile_Ubuntu
+    container_name: k8s-deployer
+    
+    # Keep container running indefinitely
+    #command: tail -f /dev/null
+    
+    # Run as the 'ubuntu' user inside (matches the Dockerfile USER instruction)
+    user: ubuntu
+    
+    volumes:
+      # 1. Sync Code (Windows Current Folder <-> Container Workspace)
+      - .:/home/ubuntu
+      
+      # 2. AWS Credentials (Windows <-> Ubuntu User Home)
+      - ~/.aws:/home/ubuntu/.aws
+      
+      # 3. SSH Keys for Git (Windows <-> Ubuntu User Home)
+      - ~/.ssh:/home/ubuntu/.ssh
+      
+      # 4. KUBECONFIG (Windows <-> Ubuntu User Home)
+      - ~/.kube:/home/ubuntu/.kube
+      
+      # 5. Git Identity
+      - ~/.gitconfig:/home/ubuntu/.gitconfig
+
+    environment:
+      # Fix Ansible Host Key checking
+      - ANSIBLE_HOST_KEY_CHECKING=False
+      
+      # Point Tools to the Ubuntu User paths
+      - KUBECONFIG=/home/ubuntu/.kube/config
+      - AWS_SHARED_CREDENTIALS_FILE=/home/ubuntu/.aws/credentials
+      - AWS_CONFIG_FILE=/home/ubuntu/.aws/config
+      - AWS_DEFAULT_REGION=ap-south-1
+      
+      # Ensure HOME is set correctly
+      - HOME=/home/ubuntu

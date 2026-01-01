@@ -4,10 +4,24 @@
 *.tfstate.*
 *.tfvars
 *.tfplan
+.ansible/
+.terraform.d/
+.terraform.lock.hcl
+
+# Shell
+.bash_history
+.viminfo
+.sudo_as_admin_successful
+.local/
+.vscode/
 
 # Secrets / keys
 *.pem
 *.key
+.aws/
+.ssh/
+.kube/
+.gitconfig
 
 # Python / app artifacts (optional safety)
 .venv/

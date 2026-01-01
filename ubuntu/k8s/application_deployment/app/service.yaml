@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticketing-app-service
+  namespace: ticketing-app
+  labels:
+    app: ticketing-app
+spec:
+  type: ClusterIP
+  selector:
+    app: ticketing-app
+    version: green
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5000
