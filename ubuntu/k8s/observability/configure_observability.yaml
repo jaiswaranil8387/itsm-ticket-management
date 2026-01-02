@@ -119,13 +119,25 @@
       delay: 15
 
     # --- NEW TASK: Wait for Kibana to be fully Ready ---
-    - name: 4b. Wait for Kibana to be Ready (Required for API calls)
-      ansible.builtin.shell:
-        cmd: "kubectl wait --namespace logging --for=condition=ready pod --selector=app=kibana --timeout=300s"
-      register: kibana_wait
+    # -------------------------------------------------------
+    # 1. STRICT WAIT: Loop until Kibana Status is actually 'Green'
+    # -------------------------------------------------------
+    - name: 4b. Wait for Kibana Status to be 'Green' (Available)
+      shell: |
+        kubectl run wait-for-kibana --image=curlimages/curl --restart=Never --rm -i -- \
+          curl -s "http://kibana.logging.svc.cluster.local:5601/api/status"
+      register: kibana_status
+      # Keep retrying until the word "available" or "green" appears in the JSON response
+      until: 
+        - "'available' in kibana_status.stdout or 'green' in kibana_status.stdout"
+      retries: 60       # Try for 10 minutes (30 * 10s)
+      delay: 10
       changed_when: false
+      failed_when: false # Don't fail if curl errors initially (pod starting)
 
-
+    # -------------------------------------------------------
+    # 2. CREATE INDEX: Now safe to run because Kibana is Green
+    # -------------------------------------------------------
     - name: 4c. Create 'logstash-*' Index Pattern
       shell: |
         kubectl run create-index --image=curlimages/curl --restart=Never --rm -i -- \
@@ -134,11 +146,19 @@
           -H "Content-Type: application/json" \
           -d '{"attributes": {"title": "logstash-*", "timeFieldName": "@timestamp"}}'
       register: kibana_index_result
+      # Retry this specific step just in case of momentary API blips
+      retries: 5
+      delay: 5
+      until: kibana_index_result.rc == 0
+      # Valid failure: Exit code non-zero AND it wasn't a "409 Conflict" (already exists)
       failed_when: 
         - kibana_index_result.rc != 0
         - "'409' not in kibana_index_result.stdout"
       changed_when: "'200' in kibana_index_result.stdout"
 
+    # -------------------------------------------------------
+    # 3. SET DEFAULT
+    # -------------------------------------------------------
     - name: 4d. Set Default Index Pattern to 'logstash-*'
       shell: |
         kubectl run set-default-index --image=curlimages/curl --restart=Never --rm -i -- \
@@ -147,6 +167,9 @@
           -H "Content-Type: application/json" \
           -d '{"changes": {"defaultIndex": "logstash-pattern"}}'
       register: default_index_result
+      retries: 5
+      delay: 5
+      until: default_index_result.rc == 0
       changed_when: "'200' in default_index_result.stdout"
       failed_when: 
         - default_index_result.rc != 0

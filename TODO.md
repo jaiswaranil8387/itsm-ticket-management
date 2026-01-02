@@ -1,0 +1,4 @@
+- [x] Add Table of Contents to README.md
+- [x] Include Docker installation prerequisites
+- [x] Add Cleanup section for destroying infrastructure
+- [x] Improve overall formatting and readability
