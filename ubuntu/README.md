@@ -27,46 +27,65 @@ To ensure consistency and eliminate "it works on my machine" issues, this projec
 
 The pipeline automates the following architecture:
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Terraform     │────▶│   AWS Cloud     │────▶│  3 EC2 Instances│
-│                 │     │                 │     │                 │
-│ Creates Servers │     │ Infrastructure  │     │ • 1 Master     │
-└─────────────────┘     └─────────────────┘     │ • 2 Workers     │
-                                                └─────────────────┘
-                                                       │
-                                                       ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│    Ansible      │────▶│   Kubernetes    │────▶│     Cluster     │
-│                 │     │                 │     │                 │
-│ Deploys K8s     │     │ Kubeadm Setup   │     │ • 1 Master Node │
-└─────────────────┘     │ CNI (Calico)    │     │ • 2 Worker Nodes│
-                        └─────────────────┘     └─────────────────┘
-                                                       │
-                                                       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Deployments via Ansible                       │
-├─────────────────────────────────────────────────────────────────┤
-│ • ArgoCD (GitOps)                                               │
-│ • Ticketing App (Python/Flask) + Postgres DB                    │
-│ • Monitoring: Prometheus + Grafana                              │
-│ • Logging: EFK (Elasticsearch + Fluentbit + Kibana)             │
-│ • Tracing: Elasticsearch + Jaeger                               │
-└─────────────────────────────────────────────────────────────────┘
-                                                       │
-                                                       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        Endpoints                                │
-├─────────────────────────────────────────────────────────────────┤
-│ • Application: aniljaiswar.pp.ua                                │
-│ • ArgoCD: argocd.aniljaiswar.pp.ua                              │
-│ • Grafana: monitor.aniljaiswar.pp.ua                            │
-│ • Kibana: kibana.aniljaiswar.pp.ua                              │
-│ • Jaeger: jaeger.aniljaiswar.pp.ua                              │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    %% --- STYLING ---
+    classDef infra fill:#2d3436,stroke:#dfe6e9,stroke-width:2px,color:#fff
+    classDef aws fill:#ff9900,stroke:#232f3e,stroke-width:2px,color:#fff
+    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:2px,color:#fff
+    classDef app fill:#00b894,stroke:#fff,stroke-width:2px,color:#fff
+    classDef url fill:#0984e3,stroke:#fff,stroke-width:2px,color:#fff
+
+    subgraph Phase1 [Phase 1: Infrastructure]
+        direction TB
+        TF(Terraform):::infra -->|Provisions| AWS(AWS Cloud):::aws
+        AWS -->|Creates| EC2_Group
+
+        subgraph EC2_Group [EC2 Fleet]
+            direction TB
+            Master[Master Node]:::infra
+            Worker1[Worker Node 1]:::infra
+            Worker2[Worker Node 2]:::infra
+        end
+    end
+
+    subgraph Phase2 [Phase 2: Configuration]
+        direction TB
+        Ansible(Ansible):::infra -->|Configures| EC2_Group
+        Ansible -->|Bootstraps| K8s(Kubernetes Cluster):::k8s
+    end
+
+    subgraph Phase3 [Phase 3: Workloads & Observability]
+        direction LR
+        K8s --> Apps
+
+        subgraph Apps [Deployed Applications]
+            direction LR
+            Ticketing[Ticketing App]:::app
+            Argo[ArgoCD GitOps]:::app
+            Graf[Prometheus + Grafana]:::app
+            EFK[EFK Logging Stack]:::app
+            Jaeger[Jaeger Tracing]:::app
+        end
+    end
+
+    subgraph Phase4 [Phase 4: Public Access Endpoints]
+        direction LR
+        %% Domains
+        URL_App(http://aniljaiswar.pp.ua):::url --> Ticketing
+        URL_Argo(https://argocd.aniljaiswar.pp.ua):::url --> Argo
+        URL_Graf(https://monitor.aniljaiswar.pp.ua):::url --> Graf
+        URL_Kib(https://kibana.aniljaiswar.pp.ua):::url --> EFK
+        URL_Jaeg(https://jaeger.aniljaiswar.pp.ua):::url --> Jaeger
+    end
+
+    %% Link Phases
+    Phase1 --> Phase2
+    Phase2 --> Phase3
+    Phase4 --> Phase3
 ```
 
-![alt text](image.png)
+
 
 * **Infrastructure:** AWS EC2 Instances (Master & Worker Nodes) via Terraform.
 * **Configuration:** Ansible Playbooks for Kubeadm setup, CNI (Calico/Flannel), and joining nodes.
