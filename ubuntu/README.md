@@ -186,7 +186,7 @@ This project uses **Nginx Ingress** to route traffic. We do not use AWS LoadBala
 | **ArgoCD** | HTTPS | [argocd.aniljaiswar.pp.ua](https://argocd.aniljaiswar.pp.ua/) | `admin` / *(See below)* |
 | **Jaeger UI** | HTTPS | [jaeger.aniljaiswar.pp.ua](https://jaeger.aniljaiswar.pp.ua/) | N/A |
 
-> **DNS Note:** Ensure your DNS provider (`aniljaiswar.pp.ua`) points these subdomains to the **Public IP** of your Kubernetes Worker Node. You can find this IP by running `terraform output` or checking the AWS Console.
+> **DNS Note:** Ensure your DNS provider (`aniljaiswar.pp.ua`) points these subdomains to the **Public IP** of your Kubernetes Worker Node. You can find this IP by running `terraform output` or checking the AWS Console..
 >
 > **Alternative Access:** If DNS is not configured, you can access the services directly using the Public IP and default ports:
 > - Ticketing App: `http://<PublicIP>:80`

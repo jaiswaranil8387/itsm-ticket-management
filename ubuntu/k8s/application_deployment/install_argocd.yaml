@@ -94,7 +94,7 @@
 
     - name: Save Argo CD Password to file
       ansible.builtin.copy:
-        content: "ArgoCD URL: https://argocd.aniljaiswar.pp.ua/\nUsername: admin\nPassword: {{ argo_pass.stdout }}"
+        content: "ArgoCD URL : https://argocd.aniljaiswar.pp.ua/\nUsername: admin\nPassword: {{ argo_pass.stdout }}"
         dest: "{{ playbook_dir }}/argocd_pass.txt"
         mode: '0600'
 

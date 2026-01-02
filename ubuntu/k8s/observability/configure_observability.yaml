@@ -146,7 +146,7 @@
           -H "Content-Type: application/json" \
           -d '{"attributes": {"title": "logstash-*", "timeFieldName": "@timestamp"}}'
       register: kibana_index_result
-      # Retry this specific step just in case of momentary API blips
+      # Retry thiss specific step just in case of momentary API blips
       retries: 5
       delay: 5
       until: kibana_index_result.rc == 0
