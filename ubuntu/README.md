@@ -27,6 +27,45 @@ To ensure consistency and eliminate "it works on my machine" issues, this projec
 
 The pipeline automates the following architecture:
 
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Terraform     │────▶│   AWS Cloud     │────▶│  3 EC2 Instances│
+│                 │     │                 │     │                 │
+│ Creates Servers │     │ Infrastructure  │     │ • 1 Master     │
+└─────────────────┘     └─────────────────┘     │ • 2 Workers     │
+                                                └─────────────────┘
+                                                       │
+                                                       ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│    Ansible      │────▶│   Kubernetes    │────▶│     Cluster     │
+│                 │     │                 │     │                 │
+│ Deploys K8s     │     │ Kubeadm Setup   │     │ • 1 Master Node │
+└─────────────────┘     │ CNI (Calico)    │     │ • 2 Worker Nodes│
+                        └─────────────────┘     └─────────────────┘
+                                                       │
+                                                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Deployments via Ansible                       │
+├─────────────────────────────────────────────────────────────────┤
+│ • ArgoCD (GitOps)                                               │
+│ • Ticketing App (Python/Flask) + Postgres DB                    │
+│ • Monitoring: Prometheus + Grafana                              │
+│ • Logging: EFK (Elasticsearch + Fluentbit + Kibana)             │
+│ • Tracing: Elasticsearch + Jaeger                               │
+└─────────────────────────────────────────────────────────────────┘
+                                                       │
+                                                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Endpoints                                │
+├─────────────────────────────────────────────────────────────────┤
+│ • Application: aniljaiswar.pp.ua                                │
+│ • ArgoCD: argocd.aniljaiswar.pp.ua                              │
+│ • Grafana: monitor.aniljaiswar.pp.ua                            │
+│ • Kibana: kibana.aniljaiswar.pp.ua                              │
+│ • Jaeger: jaeger.aniljaiswar.pp.ua                              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 * **Infrastructure:** AWS EC2 Instances (Master & Worker Nodes) via Terraform.
 * **Configuration:** Ansible Playbooks for Kubeadm setup, CNI (Calico/Flannel), and joining nodes.
 * **Application:** Python/Flask Ticketing App deployed via Kubernetes Manifests (Nginx Ingress).

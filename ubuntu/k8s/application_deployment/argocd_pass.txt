@@ -1,0 +1,3 @@
+ArgoCD URL : https://argocd.aniljaiswar.pp.ua/
+Username: admin
+Password: QHS8k6ZfKKUCuDqw
