@@ -1,0 +1,36 @@
+name: Python Linting (Flake8)
+
+on:
+  push:
+    branches: [ "master" ]  # <--- CHANGED to master
+  pull_request:
+    branches: [ "master" ]  # <--- CHANGED to master
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Clone your code so the runner can see it
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # Step 2: Install Python
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    # Step 3: Install Flake8
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8
+
+    # Step 4: Run Flake8 ONLY on the 'src' folder
+    - name: Run Flake8
+      run: |
+        # Scan only the 'src' folder. 
+        # --exit-zero means it will show errors but won't fail the build (Green checkmark).
+        # Remove --exit-zero if you want it to Fail (Red X) on bad code.
+        flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
