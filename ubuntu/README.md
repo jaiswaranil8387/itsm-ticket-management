@@ -1,6 +1,6 @@
 # 🚀 Automated Kubernetes DevOps Pipeline on AWS
 
-![Project Status](https://img.shields.io/badge/Status-Complete-success) ![Terraform](https://img.shields.io/badge/IaC-Terraform-purple) ![Ansible](https://img.shields.io/badge/Config-Ansible-red) ![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-blue) ![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-orange) ![Elastic](https://img.shields.io/badge/Logging-EFK-green)
+![Project Status](https://img.shields.io/badge/Status-Complete-success) ![Terraform](https://img.shields.io/badge/IaC-Terraform-purple) ![Ansible](https://img.shields.io/badge/Config-Ansible-red) ![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-blue) ![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-orange) ![Elastic](https://img.shields.io/badge/Logging-EFK-green) ![Jaeger](https://img.shields.io/badge/Tracing-Jaeger-yellow)
 
 ## 📋 Table of Contents
 
