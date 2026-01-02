@@ -66,6 +66,8 @@ The pipeline automates the following architecture:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+![alt text](image.png)
+
 * **Infrastructure:** AWS EC2 Instances (Master & Worker Nodes) via Terraform.
 * **Configuration:** Ansible Playbooks for Kubeadm setup, CNI (Calico/Flannel), and joining nodes.
 * **Application:** Python/Flask Ticketing App deployed via Kubernetes Manifests (Nginx Ingress).
