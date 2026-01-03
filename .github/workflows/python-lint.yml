@@ -65,3 +65,9 @@ jobs:
         # --config=auto: Use automatic configuration
         # || true: Continue even if findings are found (optional, remove if you want to fail on security issues)
         semgrep scan --config=auto src || true
+
+    - name: Run Gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
