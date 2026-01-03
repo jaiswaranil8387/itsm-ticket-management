@@ -1,5 +1,5 @@
-Flask==2.0.2
-Werkzeug==2.3.7 
+Flask==3.0.0
+Werkzeug==3.0.0
 psycopg2-binary==2.9.9
 python-json-logger
 opentelemetry-distro
@@ -9,4 +9,4 @@ opentelemetry-instrumentation-requests
 opentelemetry-instrumentation-flask
 opentelemetry-instrumentation-psycopg2
 opentelemetry-instrumentation-logging
-pytest
+pytest==8.0.0
