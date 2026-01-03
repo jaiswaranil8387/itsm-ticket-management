@@ -214,11 +214,22 @@
       register: db_restore_result
       ignore_errors: yes
 
-    # --- 11. NAMESPACE ---
+    # --- 11. Cloudflare ---
+    - name: Create Cloudflare Tunnel Secret
+      ansible.builtin.shell: |
+        kubectl create secret generic cloudflared-secret \
+          --from-literal=token="{{ lookup('env', 'TUNNEL_TOKEN') }}" \
+          -n ticketing-app \
+          --dry-run=client -o yaml | kubectl apply -f -
+      register: cf_secret_result
+      changed_when: "'created' in cf_secret_result.stdout or 'configured' in cf_secret_result.stdout"
+
     - name: Create Application Cloudflare
       kubernetes.core.k8s:
         state: present
         definition: "{{ lookup('file', 'cloudflared.yaml') }}"
+      vars:
+        token_value: "{{ lookup('env', 'TUNNEL_TOKEN') }}"
 
     - name: Final Summary
       ansible.builtin.debug:
