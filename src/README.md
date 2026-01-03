@@ -62,7 +62,11 @@ A web-based IT Service Management (ITSM) application designed to streamline the 
    docker-compose -f docker-compose-postgres.yaml up --build
    ```
 6. **Access the Application**:
-   - Open a browser and navigate to `http://localhost:5000`.
+   1. For direct python app
+      http://localhost:5000
+   2. For docker
+      http://localhost:5000
+      https://uat.aniljaiswar.pp.ua/
    - Log in with the default admin credentials or create new users via the admin dashboard.
 
 ## Usage
