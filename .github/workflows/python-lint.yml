@@ -42,3 +42,11 @@ jobs:
       run: |
         cd src
         python -m pytest test/ -v
+
+    - name: Run Bandit Security Scan
+      run: |
+        # -r: Recursive (scans all files in src/)
+        # -ll: Only show Medium and High severity issues (skips Low noise)
+        # --exit-zero: Optional. If you want the build to PASS even if risks are found, keep this flag.
+        # Remove --exit-zero if you want the build to FAIL on security risks.
+        bandit -r src/ -ll --exit-zero

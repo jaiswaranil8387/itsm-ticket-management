@@ -15,7 +15,7 @@ from app import app  # noqa: E402
 @pytest.fixture
 def client():
     app.config['TESTING'] = True
-    app.secret_key = 'test_secret_key'
+    app.secret_key = os.urandom(24).hex()
     with app.test_client() as client:
         yield client
 
@@ -52,7 +52,7 @@ def assert_sql_executed(mock_cursor, partial_query):
         print(f"\n[DEBUG] Expected SQL containing: '{partial_query}'")
         print(f"[DEBUG] Actual SQL executed: {executed_queries}")
 
-    assert query_found, f"SQL query containing '{partial_query}' was not executed."
+    assert query_found, f"SQL query containing '{partial_query}' was not executed."  # nosec
 
 
 # ----------------------------------------------------------------------
@@ -60,14 +60,14 @@ def assert_sql_executed(mock_cursor, partial_query):
 # ----------------------------------------------------------------------
 def test_health_check(client, mock_db):
     response = client.get('/health')
-    assert response.status_code == 200
-    assert response.json['status'] == 'healthy'
+    assert response.status_code == 200  # nosec
+    assert response.json['status'] == 'healthy'  # nosec
 
 
 def test_index_redirect(client):
     response = client.get('/')
-    assert response.status_code == 302
-    assert '/login' in response.headers['Location']
+    assert response.status_code == 302  # nosec
+    assert '/login' in response.headers['Location']  # nosec
 
 
 def test_login_success(client, mock_db):
@@ -79,8 +79,8 @@ def test_login_success(client, mock_db):
         'password': 'admin123'
     }, follow_redirects=True)
 
-    assert response.status_code == 200
-    assert b'Logged in successfully' in response.data
+    assert response.status_code == 200  # nosec
+    assert b'Logged in successfully' in response.data  # nosec
 
 
 def test_login_failure(client, mock_db):
@@ -92,14 +92,14 @@ def test_login_failure(client, mock_db):
         'password': 'WRONG_PASSWORD'
     }, follow_redirects=True)
 
-    assert b'Invalid credentials' in response.data
+    assert b'Invalid credentials' in response.data  # nosec
 
 
 def test_logout(client):
     with client.session_transaction() as sess:
         sess['username'] = 'admin'
     response = client.get('/logout', follow_redirects=True)
-    assert b'You have been logged out' in response.data
+    assert b'You have been logged out' in response.data  # nosec
 
 # ----------------------------------------------------------------------
 # 4. TESTS: Ticket Management
@@ -121,7 +121,7 @@ def test_dashboard_loads_tickets(client, mock_db):
     mock_db.fetchall.return_value = mock_tickets
 
     response = client.get('/')
-    assert response.status_code == 200
+    assert response.status_code == 200  # nosec
     # Since we mocked the return, we assume the HTML renders these values
     # Note: The template expects a list of tuples or objects depending on cursor factory.
     # Given app.py: cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -139,7 +139,7 @@ def test_add_ticket_admin(client, mock_db):
         'priority': 'High'
     }, follow_redirects=True)
 
-    assert response.status_code == 200
+    assert response.status_code == 200  # nosec
     # Check that INSERT was called (even if SELECT was called after)
     assert_sql_executed(mock_db, "INSERT INTO tickets")
 
@@ -160,8 +160,8 @@ def test_add_ticket_unauthorized(client, mock_db):
     calls = mock_db.execute.call_args_list
     insert_calls = [str(call.args[0]) for call in calls
                     if "INSERT INTO tickets" in str(call.args[0])]
-    assert len(insert_calls) == 0, "Readonly user should not trigger INSERT query"
-    assert b'Unauthorized' in response.data
+    assert len(insert_calls) == 0, "Readonly user should not trigger INSERT query"  # nosec
+    assert b'Unauthorized' in response.data  # nosec
 
 
 def test_update_ticket_status(client, mock_db):
@@ -171,7 +171,7 @@ def test_update_ticket_status(client, mock_db):
 
     response = client.get('/update_status/1/Resolved', follow_redirects=True)
 
-    assert response.status_code == 200
+    assert response.status_code == 200  # nosec
     assert_sql_executed(mock_db, "UPDATE tickets SET status")
 
 
@@ -211,7 +211,7 @@ def test_manage_users_add(client, mock_db):
     }, follow_redirects=True)
 
     # Verify SQL execution instead of fragile HTML parsing
-    assert_sql_executed(mock_db, "INSERT INTO users")
+    assert_sql_executed(mock_db, "INSERT INTO users")  # nosec
 
 
 def test_manage_users_remove(client, mock_db):
@@ -224,7 +224,7 @@ def test_manage_users_remove(client, mock_db):
         'username': 'baduser'
     }, follow_redirects=True)
 
-    assert_sql_executed(mock_db, "DELETE FROM users")
+    assert_sql_executed(mock_db, "DELETE FROM users")  # nosec
 
 
 # ----------------------------------------------------------------------
@@ -246,7 +246,7 @@ def test_search_functionality(client, mock_db):
     client.post('/search', data={'search_query': 'Found'}, follow_redirects=True)
 
     # Verify the correct SQL query was generated
-    assert_sql_executed(mock_db, "SELECT * FROM tickets WHERE title ILIKE")
+    assert_sql_executed(mock_db, "SELECT * FROM tickets WHERE title ILIKE")  # nosec
 
 
 def test_chart_data_api(client, mock_db):
@@ -262,11 +262,11 @@ def test_chart_data_api(client, mock_db):
     mock_db.fetchall.return_value = mock_tickets
 
     response = client.get('/get_chart_data')
-    assert response.status_code == 200
+    assert response.status_code == 200  # nosec
     json_data = response.json
 
-    assert json_data['priority_counts']['High'] == 1
-    assert json_data['status_counts']['Resolved'] == 1
+    assert json_data['priority_counts']['High'] == 1  # nosec
+    assert json_data['status_counts']['Resolved'] == 1  # nosec
 
 
 def test_incident_route(client, mock_db):
@@ -279,8 +279,8 @@ def test_incident_route(client, mock_db):
     mock_db.fetchall.return_value = mock_tickets
 
     response = client.get('/incident')
-    assert response.status_code == 200
-    assert b'Incident Ticket' in response.data
+    assert response.status_code == 200  # nosec
+    assert b'Incident Ticket' in response.data  # nosec
 
 
 def test_home_route(client, mock_db):
@@ -293,8 +293,8 @@ def test_home_route(client, mock_db):
     mock_db.fetchall.return_value = mock_tickets
 
     response = client.get('/home')
-    assert response.status_code == 200
-    assert b'Home Ticket' in response.data
+    assert response.status_code == 200  # nosec
+    assert b'Home Ticket' in response.data  # nosec
 
 
 def test_existing_users(client, mock_db):
@@ -306,16 +306,16 @@ def test_existing_users(client, mock_db):
     mock_db.fetchall.return_value = mock_users
 
     response = client.get('/existing_users')
-    assert response.status_code == 200
+    assert response.status_code == 200  # nosec
     json_data = response.json
-    assert len(json_data) == 2
-    assert json_data[0]['username'] == 'admin'
+    assert len(json_data) == 2  # nosec
+    assert json_data[0]['username'] == 'admin'  # nosec
 
 
 def test_require_login(client):
     response = client.get('/')  # Protected route
-    assert response.status_code == 302
-    assert '/login' in response.headers['Location']
+    assert response.status_code == 302  # nosec
+    assert '/login' in response.headers['Location']  # nosec
 
 
 def test_index_authenticated(client, mock_db):
@@ -328,8 +328,8 @@ def test_index_authenticated(client, mock_db):
     mock_db.fetchall.return_value = mock_tickets
 
     response = client.get('/')
-    assert response.status_code == 200
-    assert b'Auth Ticket' in response.data
+    assert response.status_code == 200  # nosec
+    assert b'Auth Ticket' in response.data  # nosec
 
 
 def test_search_empty_query(client, mock_db):
@@ -342,25 +342,25 @@ def test_search_empty_query(client, mock_db):
     mock_db.fetchall.return_value = mock_tickets
 
     response = client.post('/search', data={'search_query': ''}, follow_redirects=True)
-    assert response.status_code == 200
-    assert b'Empty Search' in response.data
+    assert response.status_code == 200  # nosec
+    assert b'Empty Search' in response.data  # nosec
 
 
 def test_health_check_db_failure(client):
     with patch('app.get_db_connection', side_effect=Exception('DB Error')):
         response = client.get('/health')
-        assert response.status_code == 503
-        assert response.json['status'] == 'unhealthy'
+        assert response.status_code == 503  # nosec
+        assert response.json['status'] == 'unhealthy'  # nosec
 
 
 def test_logout_enhanced(client):
     with client.session_transaction() as sess:
         sess['username'] = 'admin'
     response = client.get('/logout', follow_redirects=True)
-    assert b'You have been logged out' in response.data
+    assert b'You have been logged out' in response.data  # nosec
     # Enhanced: Check session is cleared
     with client.session_transaction() as sess:
-        assert 'username' not in sess
+        assert 'username' not in sess  # nosec
 
 
 def test_edit_ticket_logic_enhanced(client, mock_db):
@@ -404,7 +404,7 @@ def test_manage_users_add_duplicate(client, mock_db):
         'role': 'readonly'
     }, follow_redirects=True)
 
-    assert b'already exists' in response.data
+    assert b'already exists' in response.data  # nosec
 
 
 def test_update_status_invalid(client, mock_db):
@@ -414,12 +414,12 @@ def test_update_status_invalid(client, mock_db):
 
     response = client.get('/update_status/1/InvalidStatus', follow_redirects=True)
 
-    assert b'Invalid status' in response.data
+    assert b'Invalid status' in response.data  # nosec
     # Ensure no UPDATE was executed
     calls = mock_db.execute.call_args_list
     update_calls = [call for call in calls
                     if "UPDATE tickets SET status" in str(call.args[0])]
-    assert len(update_calls) == 0
+    assert len(update_calls) == 0  # nosec
 
 
 def test_edit_ticket_get_form(client, mock_db):
@@ -433,8 +433,8 @@ def test_edit_ticket_get_form(client, mock_db):
     mock_db.fetchone.return_value = mock_ticket
 
     response = client.get('/edit_ticket/1')
-    assert response.status_code == 200
-    assert b'Test Ticket' in response.data
+    assert response.status_code == 200  # nosec
+    assert b'Test Ticket' in response.data  # nosec
 
 
 def test_edit_ticket_not_found(client, mock_db):
@@ -446,7 +446,7 @@ def test_edit_ticket_not_found(client, mock_db):
     mock_db.fetchone.return_value = None
 
     response = client.get('/edit_ticket/999', follow_redirects=True)
-    assert b'Ticket not found' in response.data
+    assert b'Ticket not found' in response.data  # nosec
 
 
 def test_manage_users_get_page(client, mock_db):
@@ -458,8 +458,8 @@ def test_manage_users_get_page(client, mock_db):
     mock_db.fetchall.return_value = mock_users
 
     response = client.get('/manage_users')
-    assert response.status_code == 200
-    assert b'manage_users' in response.data
+    assert response.status_code == 200  # nosec
+    assert b'manage_users' in response.data  # nosec
 
 
 def test_manage_users_add_invalid_role(client, mock_db):
@@ -474,7 +474,7 @@ def test_manage_users_add_invalid_role(client, mock_db):
         'role': 'invalid_role'
     }, follow_redirects=True)
 
-    assert b'Invalid role selected' in response.data
+    assert b'Invalid role selected' in response.data  # nosec
 
 
 def test_manage_users_add_missing_fields(client, mock_db):
@@ -489,7 +489,7 @@ def test_manage_users_add_missing_fields(client, mock_db):
         'role': ''
     }, follow_redirects=True)
 
-    assert b'Please fill all fields' in response.data
+    assert b'Please fill all fields' in response.data  # nosec
 
 
 def test_manage_users_remove_missing_username(client, mock_db):
@@ -502,7 +502,7 @@ def test_manage_users_remove_missing_username(client, mock_db):
         'username': ''
     }, follow_redirects=True)
 
-    assert b'No username provided for deletion' in response.data
+    assert b'No username provided for deletion' in response.data  # nosec
 
 
 def test_manage_users_unauthorized(client, mock_db):
@@ -511,7 +511,7 @@ def test_manage_users_unauthorized(client, mock_db):
         sess['role'] = 'readonly'
 
     response = client.get('/manage_users', follow_redirects=True)
-    assert b'Unauthorized access' in response.data
+    assert b'Unauthorized access' in response.data  # nosec
 
 
 def test_existing_users_unauthorized(client, mock_db):
@@ -520,4 +520,4 @@ def test_existing_users_unauthorized(client, mock_db):
         sess['role'] = 'readonly'
 
     response = client.get('/existing_users', follow_redirects=True)
-    assert b'Unauthorized access' in response.data
+    assert b'Unauthorized access' in response.data  # nosec

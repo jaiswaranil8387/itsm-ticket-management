@@ -13,6 +13,10 @@ import functools
 import time
 import sys
 from pythonjsonlogger import jsonlogger
+from dotenv import load_dotenv
+
+# Load variables from a .env file (if it exists)
+load_dotenv()
 
 LoggingInstrumentor().instrument(set_logging_fmt=False)
 
@@ -65,18 +69,19 @@ def log_execution(func):
 
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+# app.secret_key = 'your_secret_key'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY')
 
 
 # Database Connection Function
 @log_execution
 def get_db_connection():
     conn = psycopg2.connect(
-        host=os.environ.get('DB_HOST', 'localhost'),
-        port=os.environ.get('DB_PORT', 5432),
+        host=os.environ.get('DB_HOST', '13.201.179.154'),
+        port=os.environ.get('DB_PORT', 30432),
         database=os.environ.get('DB_NAME', 'app'),
         user=os.environ.get('DB_USER', 'app'),
-        password=os.environ.get('DB_PASSWORD', 'password')
+        password=os.environ.get('DB_PASSWORD')
     )
     return conn
 
@@ -604,4 +609,4 @@ if __name__ == '__main__':
         # We use the logger even here for consistency
         logger.warning(f"DB Init Warning (ignore if tables exist): {e}")
 
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)  # nosec

@@ -27,6 +27,7 @@
 .venv/
 __pycache__/
 *.pyc
+.env
 
 # But include test files and specific Python files
 !src/test/*.py
