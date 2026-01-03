@@ -23,12 +23,14 @@ A web-based IT Service Management (ITSM) application designed to streamline the 
 - Python 3.6 or higher
 - pip (Python package manager)
 - Git
+- Docker
+
 
 ## Setup Instructions
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/jaiswaranil8387/itsm-ticket-management.git
-   cd itsm-ticket-management
+   cd src
    ```
 2. **Install Dependencies**:
    ```bash
@@ -36,6 +38,7 @@ A web-based IT Service Management (ITSM) application designed to streamline the 
    ```
 3. **Initialize the Database**:
    - The application automatically creates a `tickets.db` SQLite database with sample tickets and a default admin user (username: `admin`, password: `admin123`) on first run.
+
 4. **Create Environment File**:
    - Create a `.env` file in the root directory of the project with the following variables:
      ```
@@ -45,9 +48,18 @@ A web-based IT Service Management (ITSM) application designed to streamline the 
      
      ```
      Replace the placeholder values with your actual database credentials and a secure secret key.
+     
 5. **Run the Application**:
+   You can run the application in two ways:
+
+   **Option 1: Direct Python Execution**
    ```bash
    python app.py
+   ```
+
+   **Option 2: Using Docker Compose**
+   ```bash
+   docker-compose -f docker-compose-postgres.yaml up --build
    ```
 6. **Access the Application**:
    - Open a browser and navigate to `http://localhost:5000`.
