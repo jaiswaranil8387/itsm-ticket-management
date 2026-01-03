@@ -21,14 +21,14 @@ jobs:
       with:
         python-version: "3.10"
 
-    # Step 3: Install Flake8
+    # Step 3: Install Dependencies
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8
-        pip install pytest pytest-mock
         # Install your app dependencies (Flask, psycopg2, etc.)
         if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
+        # Create a requirements-dev.txt locally first with: flake8, pytest, bandit, semgrep
+        if [ -f src/requirements-dev.txt ]; then pip install -r src/requirements-dev.txt; fi
 
     # Step 4: Run Flake8 ONLY on the 'src' folder
     - name: Run Flake8
@@ -59,8 +59,6 @@ jobs:
 
     - name: Run Semgrep Security Scan
       run: |
-        # Install semgrep for static analysis
-        pip install semgrep
         # Run semgrep scan with auto config on src directory
         # --config=auto: Use automatic configuration
         # || true: Continue even if findings are found (optional, remove if you want to fail on security issues)

@@ -9,9 +9,6 @@ opentelemetry-instrumentation-requests
 opentelemetry-instrumentation-flask
 opentelemetry-instrumentation-psycopg2
 opentelemetry-instrumentation-logging
-pytest==8.0.0
 python-dotenv
-bandit
-pip-audit
 Flask-WTF
 WTForms
