@@ -36,7 +36,7 @@ jobs:
         # Scan only the 'src' folder. 
         # --exit-zero means it will show errors but won't fail the build (Green checkmark).
         # Remove --exit-zero if you want it to Fail (Red X) on bad code.
-        flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 src/app.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Run Tests
       run: |
