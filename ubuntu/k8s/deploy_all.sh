@@ -3,6 +3,19 @@
 # Exit immediately if a command exits with a non-zero status (error).
 set -e
 
+# 1. Load secrets from .env if it exists (for Local Dev)
+if [ -f .env ]; then
+  set -a  # Automatically export all variables
+  source .env
+  set +a
+fi
+
+# 2. Safety Check: Stop if token is missing
+if [ -z "$TUNNEL_TOKEN" ]; then
+  echo "ERROR: TUNNEL_TOKEN is not set. Please set it or create a .env file."
+  exit 1
+fi
+
 # --- 1. Terraform Deployment ---
 
 echo "Starting Terraform deployment for AWS infrastructure..."

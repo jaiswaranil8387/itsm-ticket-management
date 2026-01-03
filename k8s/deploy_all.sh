@@ -5,7 +5,9 @@ set -e
 
 # 1. Load secrets from .env if it exists (for Local Dev)
 if [ -f .env ]; then
+  set -a  # Automatically export all variables
   source .env
+  set +a
 fi
 
 # 2. Safety Check: Stop if token is missing

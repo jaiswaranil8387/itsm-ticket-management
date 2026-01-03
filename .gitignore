@@ -7,6 +7,7 @@
 .ansible/
 .terraform.d/
 .terraform.lock.hcl
+argocd_pass.txt
 
 # Shell
 .bash_history

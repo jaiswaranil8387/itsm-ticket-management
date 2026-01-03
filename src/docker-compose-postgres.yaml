@@ -42,7 +42,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=app
       - DB_USER=app
-      - DB_PASSWORD=924LhctkhAbZxmqz7NB8X5esMJ1pdDYOVhzRBdWz5Agt5gjEziHEemlficH5xqcb
+      - DB_PASSWORD=${DB_PASSWORD}
       - PGSSLMODE=disable
 
       # --- OTel Configuration (The Clean Way) ---
@@ -72,7 +72,7 @@ services:
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
-      - TUNNEL_TOKEN=eyJhIjoiYzcxMWQyOWM1ODQyNTFkOTQ0NjZkNGI5OTc5Mjk4OWIiLCJ0IjoiODg4MDIyZTMtNDE0Yy00NjJkLWI2MGItOGQxZTc3Njg4MDJmIiwicyI6Ik5Ua3dOV1JqTmpRdFpESTFaUzAwT1RRMkxXSTNNVE10WVdNM1pUZzNaamRrTTJWbSJ9
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     security_opt:
       - no-new-privileges:true
 
