@@ -32,15 +32,24 @@ A web-based IT Service Management (ITSM) application designed to streamline the 
    ```
 2. **Install Dependencies**:
    ```bash
-   pip install flask werkzeug
+   pip install -r requirements.txt
    ```
 3. **Initialize the Database**:
    - The application automatically creates a `tickets.db` SQLite database with sample tickets and a default admin user (username: `admin`, password: `admin123`) on first run.
-4. **Run the Application**:
+4. **Create Environment File**:
+   - Create a `.env` file in the root directory of the project with the following variables:
+     ```
+     FLASK_SECRET_KEY=your_secret_key_here
+     DB_PASSWORD=your_db_password
+     TUNNEL_TOKEN=your_tunnel_token_here_if_using_cloudflare
+     
+     ```
+     Replace the placeholder values with your actual database credentials and a secure secret key.
+5. **Run the Application**:
    ```bash
    python app.py
    ```
-5. **Access the Application**:
+6. **Access the Application**:
    - Open a browser and navigate to `http://localhost:5000`.
    - Log in with the default admin credentials or create new users via the admin dashboard.
 
