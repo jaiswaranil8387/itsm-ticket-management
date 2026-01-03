@@ -27,7 +27,12 @@
 .venv/
 __pycache__/
 *.pyc
-*.py
+
+# But include test files and specific Python files
+!src/test/*.py
+!src/test/**/*.py
+!requirements.txt
+!pyproject.toml
 *.toml
 uv.lock
 tickets.db
