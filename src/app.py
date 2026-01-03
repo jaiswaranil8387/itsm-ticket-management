@@ -30,44 +30,43 @@ if not logger.handlers:
     logHandler.setFormatter(formatter)
     logger.addHandler(logHandler)
 
+
 # The Decorator: "Tag" your functions with this to trace them
 def log_execution(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         # Log Start
         logger.info(f"Executing {func.__name__}", extra={
-            "function_name": func.__name__, 
+            "function_name": func.__name__,
             "status": "started"
         })
-        
         start_time = time.time()
-        
         try:
             # Run the actual function
             result = func(*args, **kwargs)
-            
             # Log Success & Duration
             duration = time.time() - start_time
             logger.info(f"Completed {func.__name__}", extra={
-                "function_name": func.__name__, 
+                "function_name": func.__name__,
                 "status": "success",
                 "duration_seconds": round(duration, 4)
             })
             return result
-            
         except Exception as e:
             # Log Failure
             logger.error(f"Failed {func.__name__}", extra={
-                "function_name": func.__name__, 
-                "status": "failed", 
+                "function_name": func.__name__,
+                "status": "failed",
                 "error": str(e)
             })
-            raise e # Re-raise error so Flask handles it
+            raise e  # Re-raise error so Flask handles it
     return wrapper
 # --- LOGGING SETUP END ---
 
+
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
+
 
 # Database Connection Function
 @log_execution
@@ -81,12 +80,13 @@ def get_db_connection():
     )
     return conn
 
+
 # Initialize PostgreSQL database
 @log_execution
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     # Create tickets table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tickets (
@@ -115,7 +115,7 @@ def init_db():
             INSERT INTO tickets (title, description, priority, status, created_at)
             VALUES (%s, %s, %s, %s, %s)
         ''', sample_tickets)
-    
+
     # Create users table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
@@ -137,6 +137,7 @@ def init_db():
     conn.commit()
     conn.close()
 
+
 # Add a new ticket
 @log_execution
 def add_ticket(title, description, priority):
@@ -144,7 +145,7 @@ def add_ticket(title, description, priority):
         priority = 'Low'
     status = 'Open'
     created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
+
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -155,6 +156,7 @@ def add_ticket(title, description, priority):
     conn.close()
     return priority
 
+
 # Update ticket status
 @log_execution
 def update_ticket_status(ticket_id, new_status):
@@ -164,6 +166,7 @@ def update_ticket_status(ticket_id, new_status):
     conn.commit()
     conn.close()
 
+
 # Update ticket details
 @log_execution
 def update_ticket(ticket_id, title, description, priority):
@@ -171,26 +174,28 @@ def update_ticket(ticket_id, title, description, priority):
         priority = 'Low'
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE tickets SET title = %s, description = %s, priority = %s WHERE id = %s', 
+    cursor.execute('UPDATE tickets SET title = %s, description = %s, priority = %s WHERE id = %s',
                    (title, description, priority, ticket_id))
     conn.commit()
     conn.close()
     return priority
 
+
 # Get all tickets
 @log_execution
 def get_all_tickets():
     conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=RealDictCursor) 
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
     cursor.execute('SELECT * FROM tickets ORDER BY id ASC')
     tickets_dict = cursor.fetchall()
     conn.close()
-    
+
     tickets_list = []
     for t in tickets_dict:
         tickets_list.append((t['id'], t['title'], t['description'], t['priority'], t['status'], t['created_at']))
-    
+
     return tickets_list
+
 
 # Search tickets
 @log_execution
@@ -200,11 +205,12 @@ def search_tickets_by_title(query):
     cursor.execute('SELECT * FROM tickets WHERE title ILIKE %s', ('%' + query + '%',))
     tickets_dict = cursor.fetchall()
     conn.close()
-    
+
     tickets_list = []
     for t in tickets_dict:
         tickets_list.append((t['id'], t['title'], t['description'], t['priority'], t['status'], t['created_at']))
     return tickets_list
+
 
 # Get single ticket
 @log_execution
@@ -214,10 +220,11 @@ def get_ticket_by_id(ticket_id):
     cursor.execute('SELECT * FROM tickets WHERE id = %s', (ticket_id,))
     t = cursor.fetchone()
     conn.close()
-    
+
     if t:
         return (t['id'], t['title'], t['description'], t['priority'], t['status'], t['created_at'])
     return None
+
 
 @app.route('/login', methods=['GET', 'POST'])
 @log_execution
@@ -225,7 +232,7 @@ def login():
     if request.method == 'POST':
         uname = request.form['username']
         pwd = request.form['password']
-        
+
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT password, role FROM users WHERE username = %s', (uname,))
@@ -235,14 +242,14 @@ def login():
         if user and check_password_hash(user[0], pwd):
             session['username'] = uname
             session['role'] = user[1]
-            
+
             # --- LOG: Auth Success ---
             logger.info("User Authentication Successful", extra={
                 "event": "auth_success",
                 "user": uname,
                 "role": user[1]
             })
-            
+
             flash('Logged in successfully!', 'success')
             return redirect(url_for('index'))
         else:
@@ -253,20 +260,22 @@ def login():
             })
             flash('Invalid credentials.', 'danger')
     return render_template('login.html')
-    
+
+
 @app.route('/logout')
 def logout():
     user = session.get('username', 'unknown')
     session.clear()
-    
+
     # --- LOG: Logout ---
     logger.info("User Logged Out", extra={
         "event": "user_logout",
         "user": user
     })
-    
+
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
+
 
 @app.before_request
 def require_login():
@@ -274,11 +283,12 @@ def require_login():
     if 'username' not in session and request.endpoint not in allowed_routes:
         return redirect(url_for('login'))
 
+
 @app.route("/", methods=["GET", "POST"])
 @log_execution
 def index():
     query = request.form.get('search_query', '') if request.method == 'POST' else ''
-    
+
     # --- LOG: Dashboard Access (Optional: Only log unique visits if needed) ---
     if request.method == 'GET':
         logger.info("Dashboard Accessed", extra={
@@ -308,9 +318,11 @@ def index():
         role=session.get('role')
     )
 
+
 @app.route("/home")
 def home():
     return index()
+
 
 @app.route("/get_chart_data")
 def get_chart_data():
@@ -322,13 +334,14 @@ def get_chart_data():
         'status_counts': dict(Counter(statuses))
     })
 
+
 @app.route('/search', methods=['GET', 'POST'])
 @log_execution
 def search():
     query = request.form.get('search_query', '') if request.method == 'POST' else ''
     if query:
         tickets = search_tickets_by_title(query)
-        
+
         # --- LOG: Search Query ---
         logger.info("User performed search", extra={
             "event": "user_search",
@@ -339,11 +352,13 @@ def search():
     else:
         tickets = get_all_tickets()
     return render_template('index.html', tickets=tickets, search_query=query, active_tab='search')
-    
+
+
 @app.route('/incident')
 def incident():
     tickets = get_all_tickets()
     return render_template('index.html', tickets=tickets, active_tab='incident')
+
 
 @app.route('/add_ticket', methods=['POST'])
 @log_execution
@@ -361,10 +376,10 @@ def add_ticket_route():
     title = request.form.get('title')
     description = request.form.get('description')
     priority = request.form.get('priority')
-    
+
     if title and description and priority:
         priority = add_ticket(title, description, priority)
-        
+
         # --- LOG: Ticket Created ---
         logger.info("Ticket Created Successfully", extra={
             "event": "ticket_created",
@@ -372,7 +387,7 @@ def add_ticket_route():
             "priority": priority,
             "created_by": session.get('username')
         })
-        
+
         flash(f'Ticket submitted with {priority} priority!', 'success')
     else:
         logger.warning("Ticket Creation Failed (Missing Fields)", extra={
@@ -381,6 +396,7 @@ def add_ticket_route():
         })
         flash('Please fill in all fields.', 'danger')
     return redirect(url_for('index'))
+
 
 @app.route('/update_status/<int:ticket_id>/<status>')
 @log_execution
@@ -394,10 +410,10 @@ def update_status_route(ticket_id, status):
         })
         flash('Unauthorized: Only admin can update status.', 'danger')
         return redirect(url_for('index'))
-        
+
     if status in ['Open', 'In Progress', 'Resolved']:
         update_ticket_status(ticket_id, status)
-        
+
         # --- LOG: Status Update ---
         logger.info("Ticket Status Updated", extra={
             "event": "status_change",
@@ -405,7 +421,7 @@ def update_status_route(ticket_id, status):
             "new_status": status,
             "updated_by": session.get('username')
         })
-        
+
         flash(f'Ticket {ticket_id} marked as {status}.', 'success')
     else:
         logger.error("Invalid Status Update Attempt", extra={
@@ -417,13 +433,14 @@ def update_status_route(ticket_id, status):
         flash('Invalid status.', 'danger')
     return redirect(url_for('index'))
 
+
 @app.route('/edit_ticket/<int:ticket_id>', methods=['GET', 'POST'])
 @log_execution
 def edit_ticket_route(ticket_id):
     if session.get('role') != 'admin':
         flash('Unauthorized: Only admin can edit tickets.', 'danger')
         return redirect(url_for('index'))
-       
+
     ticket = get_ticket_by_id(ticket_id)
     if not ticket:
         logger.warning("Edit Attempt on Non-Existent Ticket", extra={
@@ -433,15 +450,15 @@ def edit_ticket_route(ticket_id):
         })
         flash('Ticket not found.', 'danger')
         return redirect(url_for('index'))
-    
+
     if request.method == 'POST':
         title = request.form.get('title')
         description = request.form.get('description')
         priority = request.form.get('priority')
-        
+
         if title and description and priority:
             priority = update_ticket(ticket_id, title, description, priority)
-            
+
             # --- LOG: Ticket Updated ---
             logger.info("Ticket Updated", extra={
                 "event": "ticket_updated",
@@ -449,14 +466,15 @@ def edit_ticket_route(ticket_id):
                 "priority": priority,
                 "updated_by": session.get('username')
             })
-            
+
             flash(f'Ticket {ticket_id} updated with {priority} priority!', 'success')
         else:
             flash('Please fill in all fields.', 'danger')
         return redirect(url_for('index'))
-    
+
     tickets = get_all_tickets()
     return render_template('index.html', tickets=tickets, edit_ticket=ticket, active_tab='create', role=session.get('role'))
+
 
 @app.route('/manage_users', methods=['GET', 'POST'])
 @log_execution
@@ -494,7 +512,7 @@ def manage_users():
                         (username, hashed_pw, role)
                     )
                     conn.commit()
-                    
+
                     # --- LOG: User Created ---
                     logger.info("User Account Created", extra={
                         "event": "user_created",
@@ -502,7 +520,7 @@ def manage_users():
                         "target_role": role,
                         "created_by": session.get('username')
                     })
-                    
+
                     flash(f"User '{username}' added as {role}.", 'success')
                 except psycopg2.IntegrityError:
                     conn.rollback()
@@ -526,24 +544,24 @@ def manage_users():
             else:
                 cursor.execute('DELETE FROM users WHERE username = %s', (username,))
                 conn.commit()
-                
                 # --- LOG: User Deleted ---
                 logger.info("User Account Deleted", extra={
                     "event": "user_deleted",
                     "target_user": username,
                     "deleted_by": session.get('username')
                 })
-                
+
                 flash(f"User '{username}' removed.", 'info')
 
     # Fetch existing users for display
     cursor.execute('SELECT username, role FROM users')
     users = cursor.fetchall()
     conn.close()
-    
+
     users_list = [{'username': row[0], 'role': row[1]} for row in users]
     return render_template('index.html', users=users_list, active_tab='manage_users', role=session.get('role'))
-    
+
+
 @app.route('/existing_users', methods=['GET', 'POST'])
 def existing_users():
     if session.get('role') != 'admin':
@@ -555,9 +573,10 @@ def existing_users():
     cursor.execute('SELECT username, role FROM users')
     users = cursor.fetchall()
     conn.close()
-    
+
     users_list = [{'username': row[0], 'role': row[1]} for row in users]
     return jsonify(users_list)
+
 
 @app.route('/health')
 def health_check():
@@ -576,6 +595,7 @@ def health_check():
         })
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 503
 
+
 # Initialize database and run app
 if __name__ == '__main__':
     try:
@@ -583,5 +603,5 @@ if __name__ == '__main__':
     except Exception as e:
         # We use the logger even here for consistency
         logger.warning(f"DB Init Warning (ignore if tables exist): {e}")
-        
+
     app.run(host='0.0.0.0', port=5000, debug=False)

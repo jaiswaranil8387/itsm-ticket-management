@@ -18,6 +18,8 @@ def client():
     app.secret_key = 'test_secret_key'
     with app.test_client() as client:
         yield client
+
+
 @pytest.fixture
 def mock_db():
     """
@@ -26,29 +28,33 @@ def mock_db():
     with patch('app.psycopg2.connect') as mock_connect:
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
-        
+
         # Configure connect() to return mock_conn
         mock_connect.return_value = mock_conn
         # Configure conn.cursor() to return mock_cursor
         mock_conn.cursor.return_value = mock_cursor
-        
+
         yield mock_cursor
+
+
 # Helper function to find specific SQL statements in the execution history
 def assert_sql_executed(mock_cursor, partial_query):
     """
-    Iterates through all calls to cursor.execute() and returns True 
+    Iterates through all calls to cursor.execute() and returns True
     if any of them contain the partial_query string.
     """
     calls = mock_cursor.execute.call_args_list
     query_found = any(partial_query in str(call.args[0]) for call in calls)
-    
+
     if not query_found:
         # Print executed queries for debugging if assertion fails
         executed_queries = [str(call.args[0]) for call in calls]
         print(f"\n[DEBUG] Expected SQL containing: '{partial_query}'")
         print(f"[DEBUG] Actual SQL executed: {executed_queries}")
-    
+
     assert query_found, f"SQL query containing '{partial_query}' was not executed."
+
+
 # ----------------------------------------------------------------------
 # 3. TESTS: Core Routes
 # ----------------------------------------------------------------------
@@ -57,10 +63,12 @@ def test_health_check(client, mock_db):
     assert response.status_code == 200
     assert response.json['status'] == 'healthy'
 
+
 def test_index_redirect(client):
     response = client.get('/')
     assert response.status_code == 302
     assert '/login' in response.headers['Location']
+
 
 def test_login_success(client, mock_db):
     hashed_pw = generate_password_hash('admin123')
