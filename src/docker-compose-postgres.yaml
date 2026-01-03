@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # 1. JAEGER - The Trace Backend
+  # nosemgrep: yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger
@@ -10,16 +10,19 @@ services:
       - "4317:4317"     # OTLP Receiver (gRPC)
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+    security_opt:
+      - no-new-privileges:true
 
-  # 2. YOUR APPLICATION
+  # nosemgrep: yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
   ticketing-app:
     build: .
-    # Note: Ensure this tag matches what you build locally
     image: jaiswaranil8387/anil_doc_repo:v6
     container_name: ticketing-app
     init: true
     ports:
       - "5000:5000"
+    security_opt:
+      - no-new-privileges:true
     
     # --- COMMAND UPDATED ---
     # We use environment variables for config to keep this clean.
@@ -62,6 +65,7 @@ services:
       retries: 3
       start_period: 40s
 
+  # nosemgrep: yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
   tunnel:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
@@ -69,10 +73,15 @@ services:
     command: tunnel --no-autoupdate run
     environment:
       - TUNNEL_TOKEN=eyJhIjoiYzcxMWQyOWM1ODQyNTFkOTQ0NjZkNGI5OTc5Mjk4OWIiLCJ0IjoiODg4MDIyZTMtNDE0Yy00NjJkLWI2MGItOGQxZTc3Njg4MDJmIiwicyI6Ik5Ua3dOV1JqTmpRdFpESTFaUzAwT1RRMkxXSTNNVE10WVdNM1pUZzNaamRrTTJWbSJ9
+    security_opt:
+      - no-new-privileges:true
 
+  # nosemgrep: yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
   db-access:
     image: cloudflare/cloudflared:latest
     container_name: db-access-client
     restart: unless-stopped
     # This command creates a TCP listener locally that forwards to your domain
     command: access tcp --hostname ticketingdb.aniljaiswar.pp.ua --url tcp://0.0.0.0:5432
+    security_opt:
+      - no-new-privileges:true

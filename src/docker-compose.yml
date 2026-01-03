@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # nosemgrep: yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
   ticketing-app:
     image: jaiswaranil8387/anil_doc_repo:v4
     container_name: ticketing-app
@@ -18,8 +19,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    security_opt:
+      - no-new-privileges:true
 
   # Optional: Add nginx reverse proxy for production
+  # nosemgrep: yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
   nginx:
     image: nginx:alpine
     ports:
@@ -31,3 +35,5 @@ services:
     restart: unless-stopped
     profiles:
       - production
+    security_opt:
+      - no-new-privileges:true

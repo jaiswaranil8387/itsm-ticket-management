@@ -13,3 +13,5 @@ pytest==8.0.0
 python-dotenv
 bandit
 pip-audit
+Flask-WTF
+WTForms

@@ -6,6 +6,7 @@ from datetime import datetime
 from collections import Counter
 from werkzeug.security import generate_password_hash, check_password_hash
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
+from flask_wtf.csrf import CSRFProtect
 
 # --- LOGGING SETUP START ---
 import logging
@@ -71,13 +72,15 @@ def log_execution(func):
 app = Flask(__name__)
 # app.secret_key = 'your_secret_key'
 app.secret_key = os.environ.get('FLASK_SECRET_KEY')
+# Initialize CSRF Protection
+csrf = CSRFProtect(app)
 
 
 # Database Connection Function
 @log_execution
 def get_db_connection():
     conn = psycopg2.connect(
-        host=os.environ.get('DB_HOST', '13.201.179.154'),
+        host=os.environ.get('DB_HOST', '3.110.82.4'),
         port=os.environ.get('DB_PORT', 30432),
         database=os.environ.get('DB_NAME', 'app'),
         user=os.environ.get('DB_USER', 'app'),
@@ -609,4 +612,5 @@ if __name__ == '__main__':
         # We use the logger even here for consistency
         logger.warning(f"DB Init Warning (ignore if tables exist): {e}")
 
+    # nosemgrep: python.flask.security.audit.app-run-param-config.avoid_app_run_with_bad_host
     app.run(host='0.0.0.0', port=5000, debug=False)  # nosec

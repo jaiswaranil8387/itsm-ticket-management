@@ -56,3 +56,12 @@ jobs:
         # --desc: Show vulnerability descriptions
         # || true: Continue even if vulnerabilities are found (optional, remove if you want to fail on vulnerabilities)
         cd src && pip-audit --desc || true
+
+    - name: Run Semgrep Security Scan
+      run: |
+        # Install semgrep for static analysis
+        pip install semgrep
+        # Run semgrep scan with auto config on src directory
+        # --config=auto: Use automatic configuration
+        # || true: Continue even if findings are found (optional, remove if you want to fail on security issues)
+        semgrep scan --config=auto src || true
