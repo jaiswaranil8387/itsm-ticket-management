@@ -15,6 +15,7 @@ from app import app  # noqa: E402
 @pytest.fixture
 def client():
     app.config['TESTING'] = True
+    app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for testing
     app.secret_key = os.urandom(24).hex()
     with app.test_client() as client:
         yield client
