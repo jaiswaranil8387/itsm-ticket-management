@@ -6,7 +6,6 @@
 *.tfplan
 .ansible/
 .terraform.d/
-.terraform.lock.hcl
 argocd_pass.txt
 
 # Shell
@@ -36,7 +35,6 @@ __pycache__/
 !requirements.txt
 !pyproject.toml
 *.toml
-uv.lock
 tickets.db
 
 # App backups / versions
