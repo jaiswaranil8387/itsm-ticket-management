@@ -3,4 +3,4 @@ pytest
 pytest-mock
 bandit
 pip-audit
-semgrep
+semgrep>=1.11.0
