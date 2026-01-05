@@ -76,7 +76,7 @@
 
     - name: Create Flask Secret
       ansible.builtin.shell: |
-        kubectl create secret generic Flask-secret \
+        kubectl create secret generic flask-secret \
           --from-literal=secret-key="{{ lookup('env', 'FLASK_SECRET_KEY') }}" \
           -n ticketing-app \
           --dry-run=client -o yaml | kubectl apply -f -
@@ -113,7 +113,7 @@
    # --- NEW TASK: WAIT FOR CNPG (Fixes Webhook Error) ---
     - name: Wait for CNPG Operator to be Ready
       ansible.builtin.shell:
-        cmd: "kubectl wait deployment -n cnpg-system cnpg-controller-manager --for=condition=Available --timeout=120s"
+        cmd: "kubectl wait deployment -n cnpg-system cnpg-controller-manager --for=condition=Available --timeout=300s"
       register: cnpg_wait
       changed_when: false
 

@@ -70,18 +70,19 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       continue-on-error: true
 
-    - name: Run Trivy Vulnerability Scanner
-      uses: aquasec/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: './src'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-      continue-on-error: true
+    - name: Build Docker Image
+      run: |
+        docker build -t jaiswaranil8387/anil_doc_repo:v7 ./src
 
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
+    # 2. Run Trivy on the IMAGE (not the filesystem)
+    - name: Run Trivy Vulnerability Scanner
+      uses: aquasecurity/trivy-action@0.29.0
       with:
-        sarif_file: 'trivy-results.sarif'
-      continue-on-error: true
+        image-ref: 'jaiswaranil8387/anil_doc_repo:v7' # Must match the tag above
+        format: 'table'
+        exit-code: '1'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH'
+        # Optional: If you want to use your ignore file
+        trivyignores: './src/.trivyignore'
