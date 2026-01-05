@@ -80,8 +80,8 @@ csrf = CSRFProtect(app)
 @log_execution
 def get_db_connection():
     conn = psycopg2.connect(
-        host=os.environ.get('DB_HOST', '3.110.82.4'),
-        port=os.environ.get('DB_PORT', 30432),
+        host=os.environ.get('DB_HOST', 'localhost'),
+        port=os.environ.get('DB_PORT', 5432),
         database=os.environ.get('DB_NAME', 'app'),
         user=os.environ.get('DB_USER', 'app'),
         password=os.environ.get('DB_PASSWORD')

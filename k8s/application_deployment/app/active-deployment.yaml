@@ -52,6 +52,9 @@ spec:
             - name: DB_HOST
               value: "app-db-rw.default.svc.cluster.local"
 
+            - name: DB_PORT
+              value: "5432"
+
             # 2. Database Name (from your CNPG setup)
             - name: DB_NAME
               value: "app"

@@ -6,7 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile_Ubuntu
     container_name: k8s-deployer
-    
+    env_file:
+      - .env
     # Keep container running indefinitely
     #command: tail -f /dev/null
     
