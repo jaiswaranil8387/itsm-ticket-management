@@ -85,4 +85,4 @@ jobs:
         vuln-type: 'os,library'
         severity: 'CRITICAL,HIGH'
         # Optional: If you want to use your ignore file
-        trivyignores: './src/.trivyignore'
+        trivyignores: './src/reports/.trivyignore'

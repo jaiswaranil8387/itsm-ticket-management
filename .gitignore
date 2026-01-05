@@ -28,7 +28,6 @@ argocd_pass.txt
 __pycache__/
 *.pyc
 .env
-.trivyignore
 trivy-report.txt
 
 # But include test files and specific Python files
