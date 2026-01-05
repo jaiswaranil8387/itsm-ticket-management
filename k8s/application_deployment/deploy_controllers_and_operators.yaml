@@ -104,6 +104,15 @@
       register: ns_result
       changed_when: "'created' in ns_result.stdout"
 
+    - name: Create Flask Secret
+      ansible.builtin.shell: |
+        kubectl create secret generic Flask-secret \
+          --from-literal=secret-key="{{ lookup('env', 'FLASK_SECRET_KEY') }}" \
+          -n ticketing-app \
+          --dry-run=client -o yaml | kubectl apply -f -
+      register: flask_secret_result
+      changed_when: "'created' in flask_secret_result.stdout or 'configured' in flask_secret_result.stdout"
+
     - name: Create Cloudflare Tunnel Secret
       ansible.builtin.shell: |
         kubectl create secret generic cloudflared-secret \

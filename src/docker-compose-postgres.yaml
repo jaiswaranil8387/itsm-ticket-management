@@ -16,7 +16,7 @@ services:
   # nosemgrep: yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
   ticketing-app:
     build: .
-    image: jaiswaranil8387/anil_doc_repo:v6
+    image: jaiswaranil8387/anil_doc_repo:v7
     container_name: ticketing-app
     init: true
     ports:
@@ -36,6 +36,7 @@ services:
     # Environment variables
     environment:
       - FLASK_ENV=development
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
       
       # Database Config (Your Remote IPs)
       - DB_HOST=db-access

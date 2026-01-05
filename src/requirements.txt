@@ -1,5 +1,5 @@
-Flask==3.0.0
-Werkzeug==3.0.0
+Flask>=3.0.3
+Werkzeug>=3.0.3
 psycopg2-binary==2.9.9
 python-json-logger
 opentelemetry-distro
@@ -12,3 +12,4 @@ opentelemetry-instrumentation-logging
 python-dotenv
 Flask-WTF
 WTForms
+pip>=25.3

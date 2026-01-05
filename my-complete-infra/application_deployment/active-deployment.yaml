@@ -33,7 +33,7 @@ spec:
                 topologyKey: "kubernetes.io/hostname"
       containers:
         - name: ticketing-app
-          image: jaiswaranil8387/anil_doc_repo:v5
+          image: jaiswaranil8387/anil_doc_repo:v7
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
@@ -42,6 +42,11 @@ spec:
           # NEW SECTION: Database Connection Settings
           # ======================================================
           env:
+            - name: FLASK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: Flask-secret
+                  key: secret-key
             # 1. Hostname: Uses Full DNS to reach DB in 'default' namespace
             - name: DB_HOST
               value: "app-db-rw.default.svc.cluster.local"

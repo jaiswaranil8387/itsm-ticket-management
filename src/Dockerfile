@@ -1,7 +1,7 @@
 # ========================
 # 1st stage: Builder
 # ========================
-FROM python:3.11-slim-bookworm AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -14,7 +14,8 @@ RUN pip install uv
 # Copy requirements and install dependencies
 COPY requirements.txt .
 RUN uv venv .venv \
-    && uv pip install --python .venv/bin/python -r requirements.txt
+    && uv pip install --no-cache --python .venv/bin/python pip==25.3 \
+    && uv pip install --no-cache --python .venv/bin/python -r requirements.txt
 
 # Copy source code
 COPY . .
@@ -22,12 +23,13 @@ COPY . .
 # ============================
 # 2nd stage: Runtime
 # ============================
-FROM python:3.11-slim-bookworm
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
 # Install PostgreSQL client libraries
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -36,7 +38,7 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /app .
 
 # 1. COPY LIBRARIES (Same as before)
-COPY --from=builder /app/.venv/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /app/.venv/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 
 # 2. [NEW] COPY BINARIES 
 # We must copy the 'bin' folder to get 'opentelemetry-instrument' and 'flask' commands

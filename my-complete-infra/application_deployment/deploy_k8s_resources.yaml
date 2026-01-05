@@ -73,10 +73,22 @@
         definition: "{{ lookup('file', 'namespace.yaml') }}"
 
     # --- 3. APP DEPLOYMENT ---
+
+    - name: Create Flask Secret
+      ansible.builtin.shell: |
+        kubectl create secret generic Flask-secret \
+          --from-literal=secret-key="{{ lookup('env', 'FLASK_SECRET_KEY') }}" \
+          -n ticketing-app \
+          --dry-run=client -o yaml | kubectl apply -f -
+      register: flask_secret_result
+      changed_when: "'created' in flask_secret_result.stdout or 'configured' in flask_secret_result.stdout"
+
     - name: 3. Deploy Application (Deployment & Service)
       kubernetes.core.k8s:
         state: present
         definition: "{{ lookup('file', item) }}"
+      vars:
+        token_value: "{{ lookup('env', 'FLASK_SECRET_KEY') }}"
       loop:
         - active-deployment.yaml
         - service.yaml

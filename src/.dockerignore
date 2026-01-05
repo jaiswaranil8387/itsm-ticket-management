@@ -9,6 +9,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.venv
+.env
 
 # IDE
 .vscode/
@@ -48,3 +50,4 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+
