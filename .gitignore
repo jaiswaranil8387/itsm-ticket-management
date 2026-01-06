@@ -37,6 +37,7 @@ trivy-report.txt
 !pyproject.toml
 *.toml
 tickets.db
+ubuntu/k8s/
 
 # App backups / versions
 app_*
