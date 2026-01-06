@@ -38,6 +38,9 @@ trivy-report.txt
 *.toml
 tickets.db
 ubuntu/k8s/
+ubuntu/my-complete-infra/
+ubuntu/src/
+ubuntu/ubuntu
 
 # App backups / versions
 app_*
