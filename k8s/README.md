@@ -1,11 +1,10 @@
-# 🚀 Automated Kubernetes DevOps Pipeline on AWS (My Complete Infra)
+# 🚀 Automated Kubernetes DevOps Pipeline on AWS
 
 ![Project Status](https://img.shields.io/badge/Status-Complete-success) ![Terraform](https://img.shields.io/badge/IaC-Terraform-purple) ![Ansible](https://img.shields.io/badge/Config-Ansible-red) ![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-blue) ![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-orange) ![Elastic](https://img.shields.io/badge/Logging-EFK-green) ![Jaeger](https://img.shields.io/badge/Tracing-Jaeger-yellow)
 
 ## 📋 Table of Contents
 
 - [📖 Project Overview](#-project-overview)
-- [🚀 Deployment Options](#-deployment-options)
 - [🏗️ Architecture](#️-architecture)
 - [📂 Repository Structure](#-repository-structure)
 - [✅ Prerequisites & Setup Guide](#-prerequisites--setup-guide)
@@ -18,14 +17,7 @@
 
 ## 📖 Project Overview
 
-This folder contains the infrastructure-as-code (IaC) setup for deploying a complete Kubernetes-based ticketing system infrastructure on AWS, including cluster setup, application deployment, and observability components.
-
-The `deploy_all.sh` script orchestrates the end-to-end deployment process, automating the following stages:
-
-1. **Terraform Deployment**: Provisions AWS infrastructure (e.g., EC2 instances for Kubernetes nodes).
-2. **Ansible Cluster Setup**: Configures the Kubernetes cluster using Ansible playbooks.
-3. **Kubernetes Resources Deployment**: Deploys application and database resources to the cluster.
-4. **Observability Setup**: Installs logging, monitoring, and tracing components.
+This repository contains a complete, end-to-end DevOps automation pipeline. It provisions a highly available **Kubernetes Cluster on AWS** using **Terraform**, configures the cluster and worker nodes using **Ansible**, deploys a microservices application (Ticketing System), and sets up a comprehensive **Observability & CD Stack**.
 
 To ensure consistency and eliminate "it works on my machine" issues, this project offers two deployment options: a Dockerized Ubuntu environment or direct execution on an AWS EC2 instance.
 
@@ -98,7 +90,7 @@ This key is required for Ansible to connect to your EC2 instances.
    - **Move to:** `~/.ssh/flask-key.pem`
    - Set permissions: `chmod 600 ~/.ssh/flask-key.pem`
 
-#### 4. Create S3 Bucket for Terraform State
+##### 4. Create S3 Bucket for Terraform State
 
 Terraform is configured to store its state file in an S3 bucket for remote state management. Create an S3 bucket with the following specifications:
 
@@ -114,9 +106,9 @@ aws s3api put-bucket-versioning --bucket terraform-for-kubernetes --versioning-c
 aws s3api put-bucket-encryption --bucket terraform-for-kubernetes --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
 ```
 
-#### 5. Create `.env` File
+##### 5. Create `.env` File
 
-Create a file named `.env` in the `my-complete-infra` directory with the following variables:
+Create a file named `.env` in the `k8s` directory with the following variables:
 
 - **TUNNEL_TOKEN**: Required for Cloudflare tunnel setup.
 - **FLASK_SECRET_KEY**: Secret key for the Flask application.
@@ -170,6 +162,7 @@ graph TD
         subgraph Apps [Deployed Applications]
             direction LR
             Ticketing[Ticketing App]:::app
+            Argo[ArgoCD GitOps]:::app
             Graf[Prometheus + Grafana]:::app
             EFK[EFK Logging Stack]:::app
             Jaeger[Jaeger Tracing]:::app
@@ -179,10 +172,11 @@ graph TD
     subgraph Phase4 [Phase 4: Public Access Endpoints]
         direction LR
         %% Domains
-        URL_App(http://your-domain.com):::url --> Ticketing
-        URL_Graf(https://monitor.your-domain.com):::url --> Graf
-        URL_Kib(https://kibana.your-domain.com):::url --> EFK
-        URL_Jaeg(https://jaeger.your-domain.com):::url --> Jaeger
+        URL_App(http://aniljaiswar.pp.ua):::url --> Ticketing
+        URL_Argo(https://argocd.aniljaiswar.pp.ua):::url --> Argo
+        URL_Graf(https://monitor.aniljaiswar.pp.ua):::url --> Graf
+        URL_Kib(https://kibana.aniljaiswar.pp.ua):::url --> EFK
+        URL_Jaeg(https://jaeger.aniljaiswar.pp.ua):::url --> Jaeger
     end
 
     %% Link Phases
@@ -191,12 +185,15 @@ graph TD
     Phase4 --> Phase3
 ```
 
+
+
 * **Infrastructure:** AWS EC2 Instances (Master & Worker Nodes) via Terraform.
 * **Configuration:** Ansible Playbooks for Kubeadm setup, CNI (Calico/Flannel), and joining nodes.
 * **Application:** Python/Flask Ticketing App deployed via Kubernetes Manifests (Nginx Ingress).
+* **Continuous Delivery:** **ArgoCD** for GitOps-based deployment.
 * **Observability Stack:**
     * **Monitoring:** Prometheus + Grafana.
-    * **Logging:** EFK Stack (Elasticsearch, Fluentbit, Kibana).
+    * **Logging:** EFK Stack (Elasticsearch, **Fluentbit**, Kibana).
     * **Tracing:** Elasticsearch + Jaeger.
 
 ---
@@ -204,51 +201,43 @@ graph TD
 ## 📂 Repository Structure
 
 ```text
-├── .env                    # Environment variables (TUNNEL_TOKEN, FLASK_SECRET_KEY)
-├── deploy_all.sh           # Master orchestration script
-├── terraform-k8s-project/  # Terraform scripts for AWS Infrastructure
-├── cluster_setup/          # Ansible playbooks for K8s Cluster bootstrapping
-├── application_deployment/ # Deployment manifests for the Ticketing App
-└── monitoring/             # Prometheus, Grafana, EFK, Jaeger setups
+├── Dockerfile_Ubuntu        # Custom Control Node image (Terraform, Ansible, K8s tools installed)
+├── docker-compose-ubuntu.yml# Configuration to mount local code into the container
+├── deploy_all.sh            # Master orchestration script
+├── terraform-k8s-project/   # Terraform scripts for AWS Infrastructure
+├── cluster_setup/           # Ansible playbooks for K8s Cluster bootstrapping
+├── application_deployment/  # Deployment manifests for the Ticketing App
+└── observability/           # Prometheus, Grafana, EFK, Jaeger & ArgoCD setups
+
 ```
 
 ---
 
 ## ✅ Prerequisites & Setup Guide
 
-Before running the pipeline, follow the setup steps based on your chosen deployment option.
+Before running the pipeline, follow these setup steps on your host machine.
 
-### For Option 1: Using Ubuntu Image
+### 0. Install Docker and Docker Compose
 
-Refer to the [ubuntu README](../ubuntu/README.md) for detailed prerequisites, including:
-- Installing Docker and Docker Compose on your host machine.
-- Configuring AWS CLI, GitHub SSH Access, EC2 Key Pair, and creating the `.env` file on your host (Windows/Mac/Linux).
+This project requires Docker to run the control node container. Install Docker Desktop (for Windows/Mac) or Docker Engine (for Linux) from the official [Docker website](https://docs.docker.com/get-docker/).
 
-### For Option 2: Using AWS EC2 Instance
+Verify installation:
+```bash
+docker --version
+docker-compose --version
+```
 
-Perform the following steps directly on your AWS EC2 instance:
-
-#### 1. Install Required Tools (if not pre-installed)
-
-Ensure the following tools are installed on your EC2 instance:
-- AWS CLI
-- Terraform
-- Ansible
-- Kubectl
-- Git
-- SSH client
-
-Install them using your package manager (e.g., `apt` for Ubuntu, `yum` for Amazon Linux).
-
-#### 2. AWS Configuration (`aws configure`)
+### 1. AWS Configuration (`aws configure`)
 
 You need to connect your environment to your AWS account.
 
-1. Open your terminal on the EC2 instance.
+1. Open your terminal (or the container terminal).
 2. Run the configuration command:
 ```bash
 aws configure
+
 ```
+
 
 3. Enter your details when prompted:
 * **AWS Access Key ID:** `Paste Your Key ID`
@@ -256,22 +245,11 @@ aws configure
 * **Default region name:** `us-east-1` (or your preferred region like `ap-south-1`)
 * **Default output format:** `json`
 
-#### 3. Environment Variables
 
-Create a `.env` file in the `my-complete-infra` directory with the following variables:
 
-- **TUNNEL_TOKEN**: Required for Cloudflare tunnel setup.
-- **FLASK_SECRET_KEY**: Secret key for the Flask application.
+### 2. SSH Key Pair Setup (GitHub & EC2)
 
-Example `.env` file:
-```
-TUNNEL_TOKEN=your_cloudflare_tunnel_token_here
-FLASK_SECRET_KEY=your_flask_secret_key_here
-```
-
-#### 4. SSH Key Pair Setup (GitHub & EC2)
-
-##### **Part A: Create GitHub Access Key (To clone/push code)**
+#### **Part A: Create GitHub Access Key (To clone/push code)**
 
 If you haven't set up SSH for GitHub yet:
 
@@ -281,7 +259,7 @@ If you haven't set up SSH for GitHub yet:
 4. Go to **GitHub Settings** -> **SSH and GPG Keys** -> **New SSH Key**.
 5. Paste the key and save.
 
-##### **Part B: Create EC2 Access Key (For Ansible)**
+#### **Part B: Create EC2 Access Key (For Ansible)**
 
 This key is required for Ansible to log in to your AWS servers.
 
@@ -289,76 +267,70 @@ This key is required for Ansible to log in to your AWS servers.
 2. Click **Create key pair**.
 3. Name it: `flask-key`
 4. Select Format: `.pem` (for OpenSSH).
-5. Download the file and **move it** to the `.ssh` folder in this project:
+5. Download the file and **move it** to the `cluster_setup/` `application_deployment/` and `observability/`folder in this project:
 ```bash
-chmod 600 ~/.ssh/flask-key.pem
+chmod 600 ./cluster_setup/flask-key.pem
+chmod 600 ./application_deployment/flask-key.pem
+chmod 600 ./observability/flask-key.pem
+
 ```
+
+
 
 ---
 
 ## 🚀 Getting Started
 
-### Option 1: Using Ubuntu Image
-
-#### Phase 1: Build the Control Node
+### Phase 1: Build the Control Node
 
 We do not install tools locally. We build a standardized Ubuntu container that has all specific versions of Terraform and Ansible pre-installed.
 
 1. **Clone the Repository:**
 ```bash
-git clone https://github.com/your-repo/itsm-ticket-management.git
-cd my-complete-infra
+git clone https://github.com/jaiswaranil8387/itsm-ticket-management.git
+cd ubuntu
+
 ```
+
 
 2. **Launch the Environment:**
 This builds the image, creates the `ubuntu` user, and applies global fixes for WSL/Docker compatibility.
 ```bash
-docker-compose -f ../ubuntu/docker-compose-ubuntu.yml up -d --build
+docker-compose -f docker-compose-ubuntu.yml up -d --build
+
 ```
+
 
 3. **Enter the Control Node:**
 ```bash
 docker exec -it k8s-deployer bash
+
 ```
 
-#### Phase 2: Deploy the Pipeline
+
+
+### Phase 2: Deploy the Pipeline
 
 Once inside the container (`ubuntu@container-id`), run the deployment:
 
 1. **Initialize Permissions (First Run):**
 Ensure the `ubuntu` user owns the workspace to prevent Terraform lock errors.
 ```bash
-sudo chown -R ubuntu:ubuntu ~/my-complete-infra
-chmod 0755 ~/my-complete-infra/deploy_all.sh
+sudo chown -R ubuntu:ubuntu ~/k8s
+chmod 0755 ~/k8s/deploy_all.sh
+
 ```
+
 
 2. **Run the Master Script:**
 This script runs Terraform apply, updates the Ansible inventory dynamically, and triggers the playbooks.
 ```bash
-cd ~/my-complete-infra
+cd ~/k8s
 ./deploy_all.sh
+
 ```
 
-### Option 2: Using AWS EC2 Instance
 
-After completing the prerequisites and setup steps for Option 2 (as detailed in the Prerequisites & Setup Guide), follow these steps on your AWS EC2 instance:
-
-1. **Clone the Repository:**
-```bash
-git clone https://github.com/your-repo/itsm-ticket-management.git
-cd my-complete-infra
-```
-
-2. **Make the Script Executable:**
-```bash
-chmod 0755 deploy_all.sh
-```
-
-3. **Run the Master Script:**
-This script runs Terraform apply, updates the Ansible inventory dynamically, and triggers the playbooks.
-```bash
-./deploy_all.sh
-```
 
 ---
 
@@ -368,18 +340,27 @@ This project uses **Nginx Ingress** to route traffic. We do not use AWS LoadBala
 
 | Service | Protocol | Access URL (Domain) | Credentials (Default) |
 | --- | --- | --- | --- |
-| **Ticketing App** | HTTP | [your-domain.com](https://your-domain.com/) | N/A |
-| **Kibana** | HTTPS | [kibana.your-domain.com](https://kibana.your-domain.com/) | N/A |
-| **Grafana** | HTTPS | [monitor.your-domain.com](https://monitor.your-domain.com/) | `admin` / `admin` |
-| **Jaeger UI** | HTTPS | [jaeger.your-domain.com](https://jaeger.your-domain.com/) | N/A |
+| **Ticketing App** | HTTP | [aniljaiswar.pp.ua](https://aniljaiswar.pp.ua/) | N/A |
+| **Kibana** | HTTPS | [kibana.aniljaiswar.pp.ua](https://kibana.aniljaiswar.pp.ua/) | N/A |
+| **Grafana** | HTTPS | [monitor.aniljaiswar.pp.ua](https://monitor.aniljaiswar.pp.ua/) | `admin` / `admin` |
+| **ArgoCD** | HTTPS | [argocd.aniljaiswar.pp.ua](https://argocd.aniljaiswar.pp.ua/) | `admin` / *(See below)* |
+| **Jaeger UI** | HTTPS | [jaeger.aniljaiswar.pp.ua](https://jaeger.aniljaiswar.pp.ua/) | N/A |
 
-> **DNS Note:** Ensure your DNS provider points these subdomains to the **Public IP** of your Kubernetes Worker Node. You can find this IP by running `terraform output` or checking the AWS Console.
+> **DNS Note:** Ensure your DNS provider (`aniljaiswar.pp.ua`) points these subdomains to the **Public IP** of your Kubernetes Worker Node. You can find this IP by running `terraform output` or checking the AWS Console..
 >
 > **Alternative Access:** If DNS is not configured, you can access the services directly using the Public IP and default ports:
 > - Ticketing App: `http://<PublicIP>:80`
 > - Kibana: `https://<PublicIP>:443`
 > - Grafana: `https://<PublicIP>:443`
+> - ArgoCD: `https://<PublicIP>:443`
 > - Jaeger UI: `https://<PublicIP>:443`
+
+**To retrieve the initial ArgoCD password:**
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+
+```
 
 ---
 
@@ -394,7 +375,10 @@ This project includes advanced configurations to solve common DevOps challenges:
 ```ini
 [ssh_connection]
 ssh_args = -o ControlMaster=no -o ControlPath=none
+
 ```
+
+
 
 ### 2. Automated Kibana Configuration
 
@@ -415,12 +399,16 @@ After the script completes (`🎉 DEPLOYMENT COMPLETE!`), verify the setup:
 1. **Check Nodes:**
 ```bash
 kubectl get nodes
+
 ```
+
 
 2. **Check Ingress Rules:**
 ```bash
 kubectl get ingress -A
+
 ```
+
 
 3. **Check Logs:**
 Visit the **Kibana** URL to see centralized logs from all pods flowing through Fluentbit and Elasticsearch.
@@ -440,7 +428,7 @@ Manually delete the Kubernetes resources using kubectl or the deployment manifes
 ### 2. Destroy Terraform Infrastructure
 
 ```bash
-cd ~/my-complete-infra/terraform-k8s-project
+cd ~/k8s/terraform-k8s-project
 terraform destroy -auto-approve
 ```
 
@@ -454,7 +442,7 @@ terraform destroy -auto-approve
 
 On your host machine:
 ```bash
-docker-compose -f ../ubuntu/docker-compose-ubuntu.yml down
+docker-compose -f ubuntu/docker-compose-ubuntu.yml down
 ```
 
 > **Warning:** This will permanently delete all resources, including EC2 instances, Kubernetes cluster, and data. Ensure you have backups if needed.
@@ -466,12 +454,15 @@ docker-compose -f ../ubuntu/docker-compose-ubuntu.yml down
 
 | Error | Fix |
 | --- | --- |
-| **Permission Denied (Terraform)** | Run `sudo chown -R ubuntu:ubuntu ~/my-complete-infra` inside the container. |
-| **SSH Connection Refused** | Ensure `flask-key.pem` is in `cluster_setup/`, `application_deployment/`, and `monitoring/` and permissions are `600`. |
+| **Permission Denied (Terraform)** | Run `sudo chown -R ubuntu:ubuntu ~/k8s` inside the container. |
+| **SSH Connection Refused** | Ensure `flask-key.pem` is in `cluster_setup/` and permissions are `600`. |
 | **Kibana Index Failed** | The script retries automatically. If it fails, check if the Kibana pod is `Running`. |
-| **Missing TUNNEL_TOKEN or FLASK_SECRET_KEY** | Ensure the `.env` file is present and variables are set; the script will exit if absent. |
 
 ---
 
 **Author:** Anil Jaiswar
 **License:** MIT
+
+```
+
+```
