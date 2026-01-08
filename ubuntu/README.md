@@ -1,4 +1,3 @@
-```markdown
 # Ubuntu Deployment Environment
 
 This folder provides a Docker-based setup for running the Kubernetes deployment pipeline in a consistent Ubuntu environment, eliminating "it works on my machine" issues.
@@ -24,7 +23,7 @@ If you haven't configured AWS on your Windows machine yet, follow these steps:
     - **AWS Secret Access Key:** `[Your Secret Key]`
     - **Default region name:** `ap-south-1` (or your preferred region)
     - **Default output format:** `json`
-    
+
     *(These credentials will be automatically shared with the container via the `~/.aws` volume map.)*
 
 ### 2. Configure GitHub SSH Access
@@ -55,7 +54,7 @@ This key is required for Ansible to connect to your EC2 instances.
 6.  Click **Create key pair** to download the file.
 7.  **IMPORTANT:** Move the downloaded `flask-key.pem` file to your Windows SSH directory:
     - **Move to:** `C:\Users\<YourUserName>\.ssh\flask-key.pem`
-    
+
     *(The container will look for `~/.ssh/flask-key.pem`, which maps to this location.)*
 
 ### 4. Create `.env` File
@@ -123,7 +122,3 @@ cd ~/k8s
 * **Permission Denied (publickey):** Ensure `flask-key.pem` is strictly inside your Windows `C:\Users\<User>\.ssh\` folder.
 * **AWS Errors:** Ensure you ran `aws configure` on Windows and the region matches your Terraform scripts.
 * **SSH Connection Refused:** This setup disables SSH multiplexing (`ControlMaster=no`) in `ansible.cfg` to prevent socket errors common in Docker/WSL environments.
-
-```
-
-```
