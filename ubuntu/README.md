@@ -71,8 +71,6 @@ FLASK_SECRET_KEY=super-secret-key-change-me
 
 ```
 
----
-
 ## Quick Start
 
 Once the Windows setup above is complete, you can launch the environment.
