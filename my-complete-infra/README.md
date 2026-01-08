@@ -368,7 +368,7 @@ This project uses **Nginx Ingress** to route traffic. We do not use AWS LoadBala
 
 | Service | Protocol | Access URL (Domain) | Credentials (Default) |
 | --- | --- | --- | --- |
-| **Ticketing App** | HTTP | [your-domain.com](https://your-domain.com/) | N/A |
+| **Ticketing App** | HTTP | [your-domain.com](https://your-domain.com/) | admin / admin123 |
 | **Kibana** | HTTPS | [kibana.your-domain.com](https://kibana.your-domain.com/) | N/A |
 | **Grafana** | HTTPS | [monitor.your-domain.com](https://monitor.your-domain.com/) | `admin` / `admin` |
 | **Jaeger UI** | HTTPS | [jaeger.your-domain.com](https://jaeger.your-domain.com/) | N/A |
@@ -467,7 +467,7 @@ docker-compose -f ../ubuntu/docker-compose-ubuntu.yml down
 | Error | Fix |
 | --- | --- |
 | **Permission Denied (Terraform)** | Run `sudo chown -R ubuntu:ubuntu ~/my-complete-infra` inside the container. |
-| **SSH Connection Refused** | Ensure `flask-key.pem` is in `cluster_setup/`, `application_deployment/`, and `monitoring/` and permissions are `600`. |
+| **SSH Connection Refused** | Ensure `flask-key.pem` is in .ssh directory and permissions are `600`. |
 | **Kibana Index Failed** | The script retries automatically. If it fails, check if the Kibana pod is `Running`. |
 | **Missing TUNNEL_TOKEN or FLASK_SECRET_KEY** | Ensure the `.env` file is present and variables are set; the script will exit if absent. |
 
