@@ -215,29 +215,39 @@ graph TD
 
 ## ✅ Prerequisites & Setup Guide
 
-Before running the pipeline, follow these setup steps on your host machine.
+Before running the pipeline, follow the setup steps based on your chosen deployment option.
 
-### 0. Install Docker and Docker Compose
+### For Option 1: Using Ubuntu Image
 
-This project requires Docker to run the control node container. Install Docker Desktop (for Windows/Mac) or Docker Engine (for Linux) from the official [Docker website](https://docs.docker.com/get-docker/).
+Refer to the [ubuntu README](../ubuntu/README.md) for detailed prerequisites, including:
+- Installing Docker and Docker Compose on your host machine.
+- Configuring AWS CLI, GitHub SSH Access, EC2 Key Pair, and creating the `.env` file on your host (Windows/Mac/Linux).
 
-Verify installation:
-```bash
-docker --version
-docker-compose --version
-```
+### For Option 2: Using AWS EC2 Instance
 
-### 1. AWS Configuration (`aws configure`)
+Perform the following steps directly on your AWS EC2 instance:
+
+#### 1. Install Required Tools (if not pre-installed)
+
+Ensure the following tools are installed on your EC2 instance:
+- AWS CLI
+- Terraform
+- Ansible
+- Kubectl
+- Git
+- SSH client
+
+Install them using your package manager (e.g., `apt` for Ubuntu, `yum` for Amazon Linux).
+
+#### 2. AWS Configuration (`aws configure`)
 
 You need to connect your environment to your AWS account.
 
-1. Open your terminal (or the container terminal).
+1. Open your terminal on the EC2 instance.
 2. Run the configuration command:
 ```bash
 aws configure
-
 ```
-
 
 3. Enter your details when prompted:
 * **AWS Access Key ID:** `Paste Your Key ID`
@@ -245,11 +255,22 @@ aws configure
 * **Default region name:** `us-east-1` (or your preferred region like `ap-south-1`)
 * **Default output format:** `json`
 
+#### 3. Environment Variables
 
+Create a `.env` file in the `k8s` directory with the following variables:
 
-### 2. SSH Key Pair Setup (GitHub & EC2)
+- **TUNNEL_TOKEN**: Required for Cloudflare tunnel setup.
+- **FLASK_SECRET_KEY**: Secret key for the Flask application.
 
-#### **Part A: Create GitHub Access Key (To clone/push code)**
+Example `.env` file:
+```
+TUNNEL_TOKEN=your_cloudflare_tunnel_token_here
+FLASK_SECRET_KEY=your_flask_secret_key_here
+```
+
+#### 4. SSH Key Pair Setup (GitHub & EC2)
+
+##### **Part A: Create GitHub Access Key (To clone/push code)**
 
 If you haven't set up SSH for GitHub yet:
 
@@ -259,7 +280,7 @@ If you haven't set up SSH for GitHub yet:
 4. Go to **GitHub Settings** -> **SSH and GPG Keys** -> **New SSH Key**.
 5. Paste the key and save.
 
-#### **Part B: Create EC2 Access Key (For Ansible)**
+##### **Part B: Create EC2 Access Key (For Ansible)**
 
 This key is required for Ansible to log in to your AWS servers.
 
@@ -267,12 +288,9 @@ This key is required for Ansible to log in to your AWS servers.
 2. Click **Create key pair**.
 3. Name it: `flask-key`
 4. Select Format: `.pem` (for OpenSSH).
-5. Download the file and **move it** to the `cluster_setup/` `application_deployment/` and `observability/`folder in this project:
+5. Download the file and **move it** to the `.ssh` folder in this project:
 ```bash
-chmod 600 ./cluster_setup/flask-key.pem
-chmod 600 ./application_deployment/flask-key.pem
-chmod 600 ./observability/flask-key.pem
-
+chmod 600 ~/.ssh/flask-key.pem
 ```
 
 
