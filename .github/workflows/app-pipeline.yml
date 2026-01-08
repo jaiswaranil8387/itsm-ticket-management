@@ -70,15 +70,32 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       continue-on-error: true
 
+    - name: Calculate Version
+      run: |
+        FILE_PATH="k8s/application_deployment/app/active-deployment.yaml"
+        
+        # 1. Read the base version (e.g., v7) from the file
+        #    grep finds "image: ...:v7", cut grabs just the "7"
+        BASE_VERSION=$(grep -oP 'image: .*?:\K.*' "$FILE_PATH" | sed 's/v//')
+        
+        # 2. Combine Base Version + GitHub Run Number
+        #    If Base is "7" and Run Number is "45", result is "v7.45"
+        NEW_VERSION="v${BASE_VERSION}.${{ github.run_number }}"
+        
+        echo "Calculated Version: $NEW_VERSION"
+        
+        # 3. Save to ENV for the next steps
+        echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
     - name: Build Docker Image
       run: |
-        docker build -t jaiswaranil8387/anil_doc_repo:v7 ./src
+        docker build -t jaiswaranil8387/anil_doc_repo:${{ env.NEW_VERSION }} ./src
 
     # 2. Run Trivy on the IMAGE (not the filesystem)
     - name: Run Trivy Vulnerability Scanner
       uses: aquasecurity/trivy-action@0.29.0
       with:
-        image-ref: 'jaiswaranil8387/anil_doc_repo:v7' # Must match the tag above
+        image-ref: 'jaiswaranil8387/anil_doc_repo:${{ env.NEW_VERSION }}' # Must match the tag above
         format: 'table'
         exit-code: '1'
         ignore-unfixed: true
