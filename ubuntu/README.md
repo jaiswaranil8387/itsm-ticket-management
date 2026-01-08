@@ -93,7 +93,21 @@ docker exec -it k8s-deployer bash
 git clone https://github.com/your-repo/itsm-ticket-management.git ~/itsm-ticket-management
 ```
 
-4. **Run deployment (inside container):**
+4. **Create Ansible configuration file:**
+Create the Ansible configuration file at `/etc/ansible/ansible.cfg` with the following content:
+```bash
+sudo tee /etc/ansible/ansible.cfg > /dev/null <<EOF
+[defaults]
+host_key_checking = False
+inventory = inventory.ini
+
+[ssh_connection]
+ssh_args = -o ControlMaster=no -o ControlPath=none
+pipelining = True
+EOF
+```
+
+5. **Run deployment (inside container):**
 Your Windows credentials and keys are now available inside the container.
 ```bash
 cd ~/k8s
