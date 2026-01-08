@@ -1,6 +1,6 @@
-# 🚀 Automated Kubernetes DevOps Pipeline on AWS
+# 🚀 Automated Kubernetes DevOps Pipeline on AWS with ArgoCD
 
-![Project Status](https://img.shields.io/badge/Status-Complete-success) ![Terraform](https://img.shields.io/badge/IaC-Terraform-purple) ![Ansible](https://img.shields.io/badge/Config-Ansible-red) ![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-blue) ![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-orange) ![Elastic](https://img.shields.io/badge/Logging-EFK-green) ![Jaeger](https://img.shields.io/badge/Tracing-Jaeger-yellow)
+![Project Status](https://img.shields.io/badge/Status-Complete-success) ![Terraform](https://img.shields.io/badge/IaC-Terraform-purple) ![Ansible](https://img.shields.io/badge/Config-Ansible-red) ![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-blue) ![ArgoCD](https://img.shields.io/badge/GitOps-ArgoCD-blue) ![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-orange) ![Elastic](https://img.shields.io/badge/Logging-EFK-green) ![Jaeger](https://img.shields.io/badge/Tracing-Jaeger-yellow)
 
 ## 📋 Table of Contents
 
@@ -299,35 +299,30 @@ chmod 600 ~/.ssh/flask-key.pem
 
 ## 🚀 Getting Started
 
-### Phase 1: Build the Control Node
+### Option 1: Using Ubuntu Image
+
+#### Phase 1: Build the Control Node
 
 We do not install tools locally. We build a standardized Ubuntu container that has all specific versions of Terraform and Ansible pre-installed.
 
 1. **Clone the Repository:**
 ```bash
-git clone https://github.com/jaiswaranil8387/itsm-ticket-management.git
-cd ubuntu
-
+git clone https://github.com/your-repo/itsm-ticket-management.git
+cd k8s
 ```
-
 
 2. **Launch the Environment:**
 This builds the image, creates the `ubuntu` user, and applies global fixes for WSL/Docker compatibility.
 ```bash
-docker-compose -f docker-compose-ubuntu.yml up -d --build
-
+docker-compose -f ../ubuntu/docker-compose-ubuntu.yml up -d --build
 ```
-
 
 3. **Enter the Control Node:**
 ```bash
 docker exec -it k8s-deployer bash
-
 ```
 
-
-
-### Phase 2: Deploy the Pipeline
+#### Phase 2: Deploy the Pipeline
 
 Once inside the container (`ubuntu@container-id`), run the deployment:
 
@@ -336,16 +331,34 @@ Ensure the `ubuntu` user owns the workspace to prevent Terraform lock errors.
 ```bash
 sudo chown -R ubuntu:ubuntu ~/k8s
 chmod 0755 ~/k8s/deploy_all.sh
-
 ```
-
 
 2. **Run the Master Script:**
 This script runs Terraform apply, updates the Ansible inventory dynamically, and triggers the playbooks.
 ```bash
 cd ~/k8s
 ./deploy_all.sh
+```
 
+### Option 2: Using AWS EC2 Instance
+
+After completing the prerequisites and setup steps for Option 2 (as detailed in the Prerequisites & Setup Guide), follow these steps on your AWS EC2 instance:
+
+1. **Clone the Repository:**
+```bash
+git clone https://github.com/your-repo/itsm-ticket-management.git
+cd k8s
+```
+
+2. **Make the Script Executable:**
+```bash
+chmod 0755 deploy_all.sh
+```
+
+3. **Run the Master Script:**
+This script runs Terraform apply, updates the Ansible inventory dynamically, and triggers the playbooks.
+```bash
+./deploy_all.sh
 ```
 
 
@@ -358,7 +371,7 @@ This project uses **Nginx Ingress** to route traffic. We do not use AWS LoadBala
 
 | Service | Protocol | Access URL (Domain) | Credentials (Default) |
 | --- | --- | --- | --- |
-| **Ticketing App** | HTTP | [aniljaiswar.pp.ua](https://aniljaiswar.pp.ua/) | N/A |
+| **Ticketing App** | HTTP | [aniljaiswar.pp.ua](https://aniljaiswar.pp.ua/) | admin / admin123 |
 | **Kibana** | HTTPS | [kibana.aniljaiswar.pp.ua](https://kibana.aniljaiswar.pp.ua/) | N/A |
 | **Grafana** | HTTPS | [monitor.aniljaiswar.pp.ua](https://monitor.aniljaiswar.pp.ua/) | `admin` / `admin` |
 | **ArgoCD** | HTTPS | [argocd.aniljaiswar.pp.ua](https://argocd.aniljaiswar.pp.ua/) | `admin` / *(See below)* |
@@ -473,7 +486,7 @@ docker-compose -f ubuntu/docker-compose-ubuntu.yml down
 | Error | Fix |
 | --- | --- |
 | **Permission Denied (Terraform)** | Run `sudo chown -R ubuntu:ubuntu ~/k8s` inside the container. |
-| **SSH Connection Refused** | Ensure `flask-key.pem` is in `cluster_setup/` and permissions are `600`. |
+| **SSH Connection Refused** | Ensure `flask-key.pem` is in .ssh directory and permissions are `600`. |
 | **Kibana Index Failed** | The script retries automatically. If it fails, check if the Kibana pod is `Running`. |
 
 ---
