@@ -44,6 +44,10 @@ COPY --from=builder /app/.venv/lib/python3.12/site-packages /usr/local/lib/pytho
 # We must copy the 'bin' folder to get 'opentelemetry-instrument' and 'flask' commands
 COPY --from=builder /app/.venv/bin/* /usr/local/bin/
 
+RUN useradd -m -u 1000 appuser
+RUN chown -R appuser:appuser /app
+USER appuser
+
 # 3. [NEW] UPDATE STARTUP COMMAND
 # We remove ENTRYPOINT ["python3"] because we need to run the wrapper executable first.
 # This bakes the instrumentation directly into the image.
