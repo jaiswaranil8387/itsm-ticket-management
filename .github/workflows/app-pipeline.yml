@@ -22,12 +22,15 @@ jobs:
     # Step 1: Clone your code so the runner can see it
     - name: Checkout Code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     # Step 2: Install Python
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
+        cache: 'pip'
 
     # Step 3: Install Dependencies
     - name: Install Dependencies
