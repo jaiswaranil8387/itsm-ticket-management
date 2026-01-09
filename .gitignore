@@ -41,6 +41,7 @@ ubuntu/k8s/
 ubuntu/my-complete-infra/
 ubuntu/src/
 ubuntu/ubuntu
+ubuntu/itsm-ticket-management
 
 # App backups / versions
 app_*
