@@ -127,6 +127,9 @@
         cmd: "kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.26/deploy/local-path-storage.yaml"
       register: storage_install
       changed_when: "'created' in storage_install.stdout"
+      retries: 5
+      delay: 10
+      until: storage_install.rc == 0
 
     - name: 5c. Make 'local-path' the Default Storage Class
       ansible.builtin.shell:

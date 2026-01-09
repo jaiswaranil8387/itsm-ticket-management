@@ -374,14 +374,14 @@ resource "local_file" "ansible_inventory" {
   content = <<-EOT
 [master]
 #${module.k8s_master.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=./flask-key.pem
-master-node ansible_host=${module.k8s_master.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=./flask-key.pem
+master-node ansible_host=${module.k8s_master.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/flask-key.pem
 
 [workers]
 # Worker IPs (Dynamically generated using a loop):
 ${
   join("\n", [
     for i in range(length(module.k8s_worker)) : 
-    "worker-${i} ansible_host=${module.k8s_worker[i].public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=./flask-key.pem"
+    "worker-${i} ansible_host=${module.k8s_worker[i].public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/flask-key.pem"
   ])
 }
 

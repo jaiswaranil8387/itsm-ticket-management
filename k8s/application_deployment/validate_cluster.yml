@@ -49,7 +49,7 @@
         export KUBECONFIG=/etc/kubernetes/admin.conf
         
         # Run curl via kubectl using environment variables
-        CURL_STATUS=$(kubectl exec -n ticketing-app $TARGET_POD -- curl -s -o /dev/null -w "%{http_code}" $TARGET_URL)
+        CURL_STATUS=$(kubectl exec -n ticketing-app $TARGET_POD -- sh -c "curl -s -o /dev/null -w '%{http_code}' '$TARGET_URL'")
         
         if [ "$CURL_STATUS" == "200" ]; then
           echo "Health check successful (Status 200)."

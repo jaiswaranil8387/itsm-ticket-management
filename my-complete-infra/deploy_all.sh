@@ -2,7 +2,9 @@
 
 # Exit immediately if a command exits with a non-zero status (error).
 set -e
-PROJECT_ROOT="/home/ubuntu/my-complete-infra"
+PROJECT_ROOT=$(pwd)
+
+echo "Current Project Root set to: $PROJECT_ROOT"
 # 1. Load secrets from .env if it exists (for Local Dev)
 if [ -f .env ]; then
   set -a  # Automatically export all variables
@@ -53,7 +55,7 @@ cd "$PROJECT_ROOT/application_deployment"
 echo "Deploying appplication and database"
 
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini deploy_k8s_resources.yaml --extra-vars "confirm=yes"
-ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini validate_cluster.yml --extra-vars "confirm=yes"
+
 echo "Completed!!!!!!"
 
 # --- 4. Observability (Logging + Tracing) ---
@@ -62,3 +64,9 @@ cd "$PROJECT_ROOT/monitoring"
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini deploy-monitoring.yml --extra-vars "confirm=yes"
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini deploy-logging.yaml --extra-vars "confirm=yes"
 echo "Logging and tracing deployed successfully."
+
+cd "$PROJECT_ROOT/application_deployment"
+
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini validate_cluster.yml --extra-vars "confirm=yes"
+
+echo "🎉 VALIDATION COMPLETE!"

@@ -2,6 +2,9 @@
 
 # Exit immediately if a command exits with a non-zero status (error).
 set -e
+PROJECT_ROOT=$(pwd)
+
+echo "Current Project Root set to: $PROJECT_ROOT"
 
 # 1. Load secrets from .env if it exists (for Local Dev)
 if [ -f .env ]; then
@@ -21,7 +24,7 @@ fi
 echo "Starting Terraform deployment for AWS infrastructure..."
 
 # Navigate to the Terraform directory
-cd /home/ubuntu/k8s/terraform-k8s-project
+cd "$PROJECT_ROOT/terraform-k8s-project"
 
 # Initialize Terraform (downloads providers and modules)
 terraform init
@@ -40,7 +43,7 @@ echo "Terraform deployment complete."
 echo "Starting Ansible playbook for Kubernetes cluster setup..."
 
 # Navigate to the Ansible directory
-cd /home/ubuntu/k8s/cluster_setup
+cd "$PROJECT_ROOT/cluster_setup"
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory.ini setup_cluster.yml --extra-vars "confirm=yes"
 
 echo "Ansible cluster setup complete."
@@ -51,7 +54,7 @@ echo "Infrastructure and Kubernetes cluster deployed successfully! 🎉"
 echo "----------------------------------------------------"
 echo "PHASE 1: Deploy Controllers and Operators..."
 echo "----------------------------------------------------"
-cd /home/ubuntu/k8s/application_deployment
+cd "$PROJECT_ROOT/application_deployment"
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini deploy_controllers_and_operators.yaml --extra-vars "confirm=yes"
 
 echo "----------------------------------------------------"
@@ -66,13 +69,12 @@ echo "----------------------------------------------------"
 echo "PHASE 3: Post-Deployment Configuration (DB & Secrets)..."
 echo "----------------------------------------------------"
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini deploy_secrets_and_dbbackup.yaml --extra-vars "confirm=yes"
-ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini validate_cluster.yml --extra-vars "confirm=yes"
 
 
 echo "----------------------------------------------------"
 echo "PHASE 4: Installing Observability Stack..."
 echo "----------------------------------------------------"
-cd /home/ubuntu/k8s/observability
+cd "$PROJECT_ROOT/observability"
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini install_observability.yaml --extra-vars "confirm=yes"
 
 echo "Waiting 60 seconds for Monitoring/Logging pods to start..."
@@ -84,3 +86,9 @@ echo "----------------------------------------------------"
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini configure_observability.yaml --extra-vars "confirm=yes"
 
 echo "🎉 DEPLOYMENT COMPLETE!"
+
+cd "$PROJECT_ROOT/application_deployment"
+
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../cluster_setup/inventory.ini validate_cluster.yml --extra-vars "confirm=yes"
+
+echo "🎉 VALIDATION COMPLETE!"

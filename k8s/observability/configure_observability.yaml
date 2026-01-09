@@ -134,6 +134,10 @@
       changed_when: false
       failed_when: false # Don't fail if curl errors initially (pod starting)
 
+    - name: Sleep for 45 seconds to let Kibana initialize fully
+        ansible.builtin.pause:
+          seconds: 45
+
     # -------------------------------------------------------
     # 2. CREATE INDEX: Now safe to run because Kibana is Green
     # -------------------------------------------------------

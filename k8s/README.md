@@ -405,8 +405,7 @@ This project includes advanced configurations to solve common DevOps challenges:
 * **Solution:** We baked a global configuration into `/etc/ansible/ansible.cfg` to disable SSH Multiplexing:
 ```ini
 [ssh_connection]
-ssh_args = -o ControlMaster=no -o ControlPath=none
-
+ssh_args = -o ControlMaster=no -o ControlPath=none -o ControlPersist=60s -o ServerAliveInterval=30 -o ConnectTimeout=60
 ```
 
 

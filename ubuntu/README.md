@@ -90,7 +90,7 @@ docker exec -it k8s-deployer bash
 
 3. **Clone the repository (inside container):**
 ```bash
-git clone https://github.com/your-repo/itsm-ticket-management.git ~/itsm-ticket-management
+git clone https://github.com/jaiswaranil8387/itsm-ticket-management.git ~/itsm-ticket-management
 ```
 
 4. **Create Ansible configuration file:**
@@ -102,8 +102,7 @@ host_key_checking = False
 inventory = inventory.ini
 
 [ssh_connection]
-ssh_args = -o ControlMaster=no -o ControlPath=none
-pipelining = True
+ssh_args = -o ControlMaster=no -o ControlPath=none -o ControlPersist=60s -o ServerAliveInterval=30 -o ConnectTimeout=60pipelining = True
 EOF
 ```
 
