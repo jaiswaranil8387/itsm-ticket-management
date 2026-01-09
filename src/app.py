@@ -76,7 +76,7 @@ app.secret_key = os.environ.get('FLASK_SECRET_KEY')
 csrf = CSRFProtect(app)
 
 
-# Database Connection Functions
+# Database Connection Function
 @log_execution
 def get_db_connection():
     conn = psycopg2.connect(

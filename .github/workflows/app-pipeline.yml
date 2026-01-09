@@ -60,7 +60,7 @@ jobs:
         # -ll: Only show Medium and High severity issues (skips Low noise)
         # --exit-zero: Optional. If you want the build to PASS even if risks are found, keep this flag.
         # Remove --exit-zero if you want the build to FAIL on security risks.
-        bandit -r src/ -ll --exit-zero
+        bandit -r src/ -ll 
 
     - name: Run pip-audit Security Scan
       run: |
@@ -73,13 +73,12 @@ jobs:
         # Run semgrep scan with auto config on src directory
         # --config=auto: Use automatic configuration
         # || true: Continue even if findings are found (optional, remove if you want to fail on security issues)
-        semgrep scan --config=auto src || true
+        semgrep scan --config=auto --error src
 
     - name: Run Gitleaks
       uses: gitleaks/gitleaks-action@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      continue-on-error: true
 
     - name: Calculate Version
       run: |
