@@ -3,14 +3,19 @@ name: Python Linting (Flake8)
 on:
   push:
     branches: [ "master" ]  # <--- CHANGED to master
+    paths:
+      - 'src/**'
   pull_request:
     branches: [ "master" ]  # <--- CHANGED to master
+    paths:
+      - 'src/**'
 
 permissions:
   contents: write
 
 jobs:
-  lint:
+  ci-cd-pipeline:
+    name: "CI/CD Pipeline"
     runs-on: ubuntu-latest
 
     steps:
