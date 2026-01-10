@@ -1,8 +1,8 @@
 # ITSM Ticket Management Tool
 
-A web-based IT Service Management (ITSM) application designed to streamline the creation, tracking, and resolution of IT support tickets. Built with Python, Flask, SQLite, and HTML, this tool simulates real-world helpdesk workflows, making it ideal for managing IT incidents and user support requests.
+A web-based IT Service Management (ITSM) application designed to streamline the creation, tracking, and resolution of IT support tickets. Built with Python, Flask, PostgreSQL, and HTML, this tool simulates real-world helpdesk workflows, making it ideal for managing IT incidents and user support requests.
 
-![Python](https://img.shields.io/badge/Python-3.10-blue) ![Flask](https://img.shields.io/badge/Flask-2.3.3-lightgrey) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue) ![HTML](https://img.shields.io/badge/HTML-5-orange) ![CSS](https://img.shields.io/badge/CSS-3-blue) ![JavaScript](https://img.shields.io/badge/JavaScript-ES6-yellow) ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple) ![Jinja2](https://img.shields.io/badge/Jinja2-3.1.2-green) ![Werkzeug](https://img.shields.io/badge/Werkzeug-2.3.6-red) ![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-1.21.0-green) ![Gunicorn](https://img.shields.io/badge/Gunicorn-21.2.0-pink) ![Docker](https://img.shields.io/badge/Docker-24.0.5-blue)
+![Python](https://img.shields.io/badge/Python-3.10-blue) ![Flask](https://img.shields.io/badge/Flask-2.3.3-lightgrey) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue) ![HTML](https://img.shields.io/badge/HTML-5-orange) ![CSS](https://img.shields.io/badge/CSS-3-blue) ![JavaScript](https://img.shields.io/badge/JavaScript-ES6-yellow) ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple) ![Jinja2](https://img.shields.io/badge/Jinja2-3.1.2-green) ![Werkzeug](https://img.shields.io/badge/Werkzeug-2.3.6-red) ![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-1.21.0-green) ![Gunicorn](https://img.shields.io/badge/Gunicorn-21.2.0-pink) ![Docker](https://img.shields.io/badge/Docker-24.0.5-blue) ![Status](https://img.shields.io/badge/Status-Active-success)
 
 ## Features
 - **Ticket Management**: Create, edit, search, and track tickets with attributes like title, description, priority (High, Medium, Low), and status (Open, In Progress, Resolved).
@@ -15,7 +15,7 @@ A web-based IT Service Management (ITSM) application designed to streamline the 
 ## Technologies
 - **Programming Languages**: Python, HTML, JavaScript, SQL
 - **Framework**: Flask (Python web framework)
-- **Database**: SQLite (lightweight, serverless database)
+- **Database**: PostgreSQL (relational database)
 - **Security**: Werkzeug for password hashing and secure authentication
 - **Templating**: Jinja2 for dynamic HTML rendering
 - **Frontend**: Bootstrap (implied for responsive design)
@@ -27,6 +27,167 @@ A web-based IT Service Management (ITSM) application designed to streamline the 
 - Git
 - Docker
 
+## PostgreSQL Database Setup
+
+---
+
+## 1. Download and Install PostgreSQL
+
+Download PostgreSQL for Windows from the official site:
+[https://www.postgresql.org/download/windows/](https://www.postgresql.org/download/windows/)
+
+Complete the installation and note the **version** and **installation path**.
+
+---
+
+## 2. Configure PostgreSQL Environment Variables (Windows)
+
+### Step 1: Open Environment Variables
+
+1. Press **Windows + R**
+2. Type `sysdm.cpl` and press **Enter**
+3. Open the **Advanced** tab
+4. Click **Environment Variables**
+
+---
+
+### Step 2: Add PostgreSQL to PATH
+
+1. Under **System variables**, select **Path**
+2. Click **Edit**
+3. Click **New**
+4. Add the following path:
+
+   ```
+   C:\Program Files\PostgreSQL\18\bin
+   ```
+5. Click **OK** → **OK** → **OK** to save
+
+---
+
+### Step 3: Restart Terminal
+
+Close all Command Prompt or PowerShell windows and open a new one.
+
+---
+
+### Step 4: Verify Installation
+
+Open **Command Prompt** and run:
+
+```cmd
+psql --version
+```
+
+If PostgreSQL is configured correctly, the version number will be displayed.
+
+---
+
+## 3. Create Database and User (Using pgAdmin)
+
+### Open pgAdmin
+
+Launch **pgAdmin 4** and log in.
+
+---
+
+### Create a User
+
+1. Right-click **Login/Group Roles** → **Create** → **Login/Group Role**
+2. Set the name to:
+
+   ```
+   app
+   ```
+3. Go to the **Definition** tab:
+
+   * Set a password (e.g., `admin123`)
+   * Save this password for later use
+4. Go to the **Privileges** tab:
+
+   * Enable **Can login?**
+   * Enable **Superuser?** (recommended for development)
+5. Click **Save**
+
+---
+
+### Create a Database
+
+1. Right-click **Databases** → **Create** → **Database**
+2. Database name:
+
+   ```
+   app
+   ```
+3. Owner: select **app**
+4. Click **Save**
+
+---
+
+## 4. Import `backup.sql`
+
+1. Open **Command Prompt** or **PowerShell**
+2. Navigate to the folder containing `backup.sql`:
+
+   ```cmd
+   cd C:\Users\jaisw\Downloads\TicketingSystem\k8s\application_deployment
+   ```
+3. Run the import command:
+
+   ```cmd
+   psql -U postgres -d app -f backup.sql
+   ```
+
+---
+
+## 5. Allow Docker to Connect to PostgreSQL
+
+### Step 1: Locate PostgreSQL Data Directory
+
+Navigate to:
+
+```
+C:\Program Files\PostgreSQL\16\data
+```
+
+---
+
+### Step 2: Update `postgresql.conf`
+
+1. Open `postgresql.conf` in **Notepad (Run as Administrator)**
+2. Find:
+
+   ```
+   #listen_addresses = 'localhost'
+   ```
+3. Change it to:
+
+   ```
+   listen_addresses = '*'
+   ```
+4. Save and close the file
+
+---
+
+### Step 3: Update `pg_hba.conf`
+
+1. Open `pg_hba.conf` in **Notepad (Run as Administrator)**
+2. Add the following line at the **end of the file**:
+
+   ```
+   host    all    all    0.0.0.0/0    scram-sha-256
+   ```
+3. Save and close the file
+
+---
+
+### Step 4: Restart PostgreSQL Service
+
+1. Press **Windows + R**, type `services.msc`, and press **Enter**
+2. Find **postgresql-x64-16**
+3. Right-click and select **Restart**
+
+---
 
 ## Setup Instructions
 1. **Clone the Repository**:

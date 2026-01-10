@@ -39,7 +39,7 @@ services:
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
       
       # Database Config (Your Remote IPs)
-      - DB_HOST=db-access
+      - DB_HOST=host.docker.internal
       - DB_PORT=5432
       - DB_NAME=app
       - DB_USER=app
@@ -78,11 +78,11 @@ services:
       - no-new-privileges:true
 
   # nosemgrep: yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
-  db-access:
-    image: cloudflare/cloudflared:latest
-    container_name: db-access-client
-    restart: unless-stopped
-    # This command creates a TCP listener locally that forwards to your domain
-    command: access tcp --hostname ticketingdb.aniljaiswar.pp.ua --url tcp://0.0.0.0:5432
-    security_opt:
-      - no-new-privileges:true
+  # db-access:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: db-access-client
+  #   restart: unless-stopped
+  #   # This command creates a TCP listener locally that forwards to your domain
+  #   command: access tcp --hostname ticketingdb.aniljaiswar.pp.ua --url tcp://0.0.0.0:5432
+  #   security_opt:
+  #     - no-new-privileges:true
