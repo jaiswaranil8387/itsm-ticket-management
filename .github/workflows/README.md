@@ -16,28 +16,43 @@ This directory contains GitHub Actions workflows for the ITSM Ticket Management 
 
 #### Pipeline Visualization
 ```mermaid
-graph TD
-    A[Push to Master] --> B[Checkout & Setup]
+flowchart TD
+    %% Trigger
+    A([Push to Master]) --> B[Checkout & Setup]
     B --> C[Install Dependencies]
-    C --> D[Code Quality & Tests]
-    D --> E{Security Gates}
-    E -->|Pass| F[Docker Build & Push]
-    E -->|Fail| X[Block Deployment]
-    F --> G[Container Security Scan]
+
+    %% Stage 1: Quality
+    subgraph Quality ["Stage 1: Quality & Tests"]
+        direction TB
+        C --> D1[Flake8 Linting]
+        C --> D2[pytest Unit Tests]
+    end
+
+    %% Stage 2: Security
+    subgraph Security ["Stage 2: Security Gates (Blocking)"]
+        direction TB
+        D1 & D2 --> E1[Bandit SAST]
+        D1 & D2 --> E2[Semgrep SAST]
+        D1 & D2 --> E3[pip-audit SCA]
+        D1 & D2 --> E4[Gitleaks Scan]
+    end
+
+    %% Decision Gate
+    E1 & E2 & E3 & E4 --> Gate{All Checks Passed?}
+
+    %% Outcomes
+    Gate -- Yes --> F[Docker Build & Push]
+    Gate -- No --> X[🛑 Block Deployment]
+
+    %% Stage 3: Deployment
+    F --> G[Trivy Image Scan]
     G --> H[Update K8s Manifest]
-    H --> I["ArgoCD Sync (Automatic)"]
+    H --> I([🚀 ArgoCD Sync])
 
-    subgraph "Code Quality & Tests"
-        D1[Flake8 Linting]
-        D2[pytest Unit Tests]
-    end
-
-    subgraph "Security Gates"
-        E1[Bandit SAST]
-        E2[pip-audit SCA]
-        E3[Semgrep SAST]
-        E4[Gitleaks Secret Scan]
-    end
+    %% Styling for better visualization
+    style X fill:#ffcccc,stroke:#ff0000,stroke-width:2px
+    style Gate fill:#fff3cd,stroke:#e0a800,stroke-width:2px
+    style I fill:#e6fffa,stroke:#00ccb1,stroke-width:2px
 ```
 
 #### Permissions
