@@ -18,13 +18,26 @@ This directory contains GitHub Actions workflows for the ITSM Ticket Management 
 ```mermaid
 graph TD
     A[Push to Master] --> B[Checkout & Setup]
-    B --> C{Security Gates}
-    C -->|Pass| D[Build & Test]
-    C -->|Fail| X[Block Deployment]
-    D --> E[Docker Build & Push]
-    E --> F[Trivy Container Scan]
-    F --> G[Update K8s Manifest]
-    G --> H["ArgoCD Sync (Automatic)"]
+    B --> C[Install Dependencies]
+    C --> D[Code Quality & Tests]
+    D --> E{Security Gates}
+    E -->|Pass| F[Docker Build & Push]
+    E -->|Fail| X[Block Deployment]
+    F --> G[Container Security Scan]
+    G --> H[Update K8s Manifest]
+    H --> I["ArgoCD Sync (Automatic)"]
+
+    subgraph "Code Quality & Tests"
+        D1[Flake8 Linting]
+        D2[pytest Unit Tests]
+    end
+
+    subgraph "Security Gates"
+        E1[Bandit SAST]
+        E2[pip-audit SCA]
+        E3[Semgrep SAST]
+        E4[Gitleaks Secret Scan]
+    end
 ```
 
 #### Permissions
