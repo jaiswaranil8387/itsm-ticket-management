@@ -22,24 +22,23 @@ This directory contains GitHub Actions workflows for the ITSM Ticket Management 
 ##### ci-cd-pipeline
 Runs on `ubuntu-latest` and includes the following steps:
 
-1. **Checkout Code** - Clones the repository with full history
-2. **Set up Python 3.10** - Installs Python with pip caching
-3. **Install Dependencies** - Installs app and dev dependencies from requirements files
-4. **Run Flake8** - Lints Python code in `src/` directory with specific rules:
-   - Max complexity: 11
-   - Max line length: 127
-   - Shows statistics but doesn't fail the build
-5. **Run Tests** - Executes pytest on the test suite in `src/test/`
-6. **Run Bandit Security Scan** - Scans for security issues, showing only Medium and High severity
-7. **Run pip-audit Security Scan** - Checks for vulnerable dependencies
-8. **Run Semgrep Security Scan** - Performs static analysis for security vulnerabilities
-9. **Run Gitleaks** - Scans for secrets and sensitive data leaks
-10. **Calculate Version** - Generates a new version tag based on base version + GitHub run number
-11. **Build Docker Image** - Builds Docker image with the calculated version tag
-12. **Run Trivy Vulnerability Scanner** - Scans the Docker image for OS and library vulnerabilities
-13. **Log in to Docker Hub** - Authenticates with Docker Hub using secrets
-14. **Push Docker Image** - Pushes the versioned and latest tags to Docker Hub
-15. **Update K8s Manifest & Push to GitHub** - Updates the Kubernetes deployment manifest with the new image version and commits the change
+| Step | 🔧 Action | 📝 Description |
+|------|-----------|----------------|
+| 1 | **📥 Checkout Code** | Clones the repository with full history using `actions/checkout@v4` |
+| 2 | **🐍 Set up Python 3.10** | Installs Python 3.10 with pip caching for faster builds |
+| 3 | **📦 Install Dependencies** | Installs application and development dependencies from `requirements.txt` and `requirements-dev.txt` |
+| 4 | **🔍 Run Flake8 Linting** | Lints Python code in `src/` directory with rules:<br>• Max complexity: 11<br>• Max line length: 127<br>• Shows statistics (non-blocking) |
+| 5 | **🧪 Run Tests** | Executes pytest test suite in `src/test/` directory |
+| 6 | **🔒 Bandit Security Scan** | Scans for Python security issues (Medium/High severity only) |
+| 7 | **📋 pip-audit Scan** | Checks Python dependencies for known vulnerabilities |
+| 8 | **🔬 Semgrep SAST** | Performs static application security testing for vulnerabilities |
+| 9 | **🔑 Gitleaks Scan** | Detects secrets and sensitive data leaks in the codebase |
+| 10 | **🏷️ Calculate Version** | Generates version tag: `v{base}.{run_number}` from manifest + GitHub run number |
+| 11 | **🏗️ Build Docker Image** | Builds Docker image with calculated version tag |
+| 12 | **🛡️ Trivy Vulnerability Scan** | Scans Docker image for OS and library vulnerabilities (Critical/High only) |
+| 13 | **🔐 Docker Hub Login** | Authenticates with Docker Hub using repository secrets |
+| 14 | **📤 Push Docker Images** | Pushes versioned and `latest` tags to Docker Hub |
+| 15 | **📝 Update K8s Manifest** | Updates deployment YAML with new image version and commits changes |
 
 #### Requirements
 
