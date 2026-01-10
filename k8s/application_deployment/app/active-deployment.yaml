@@ -33,7 +33,7 @@ spec:
                 topologyKey: "kubernetes.io/hostname"
       containers:
         - name: ticketing-app
-          image: jaiswaranil8387/anil_doc_repo:v7.25
+          image: jaiswaranil8387/anil_doc_repo:v7.26
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
