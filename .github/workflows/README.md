@@ -45,8 +45,30 @@ Runs on `ubuntu-latest` and includes the following steps:
 
 **Secrets:**
 - `DOCKER_USERNAME` - Docker Hub username
-- `DOCKER_PASSWORD` - Docker Hub password
+- `DOCKER_PASSWORD` - Docker Hub access token (not password)
 - `GITHUB_TOKEN` - Automatically provided by GitHub
+
+##### Setting up Docker Hub Secrets
+
+1. **Create Docker Hub Access Token:**
+   - Log in to [Docker Hub](https://hub.docker.com/)
+   - Go to **Account Settings** > **Security**
+   - Click **New Access Token**
+   - Give it a descriptive name (e.g., "GitHub Actions CI/CD")
+   - Copy the generated token immediately (you won't see it again)
+
+2. **Add Secrets to GitHub Repository:**
+   - Go to your GitHub repository
+   - Navigate to **Settings** > **Secrets and variables** > **Actions**
+   - Click **New repository secret**
+   - Create two secrets:
+     - Name: `DOCKER_USERNAME`
+       - Value: Your Docker Hub username
+     - Name: `DOCKER_PASSWORD`
+       - Value: The access token you generated (paste the entire token)
+   - Click **Add secret** for each
+
+**Note:** Use an access token instead of your Docker Hub password for better security. Access tokens can be revoked individually without changing your account password.
 
 **Files:**
 - `src/requirements.txt` - Application dependencies
