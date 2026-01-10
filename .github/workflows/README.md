@@ -17,14 +17,14 @@ This directory contains GitHub Actions workflows for the ITSM Ticket Management 
 #### Pipeline Visualization
 ```mermaid
 graph TD
-    A[Push to Master] --> B(Checkout & Setup)
+    A[Push to Master] --> B[Checkout & Setup]
     B --> C{Security Gates}
-    C -- Pass --> D[Build & Test]
-    C -- Fail --> X[Block Deployment]
+    C -->|Pass| D[Build & Test]
+    C -->|Fail| X[Block Deployment]
     D --> E[Docker Build & Push]
     E --> F[Trivy Container Scan]
     F --> G[Update K8s Manifest]
-    G --> H[ArgoCD Sync (Automatic)]
+    G --> H["ArgoCD Sync (Automatic)"]
 ```
 
 #### Permissions
