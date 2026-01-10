@@ -2,6 +2,8 @@
 
 This directory contains GitHub Actions workflows for the ITSM Ticket Management project.
 
+![DevSecOps CI/CD Pipeline](https://github.com/jaiswaranil8387/itsm-ticket-management/actions/workflows/app-pipeline.yml/badge.svg) ![GitHub Actions](https://img.shields.io/badge/CI/CD-GitHub%20Actions-blue) ![Python](https://img.shields.io/badge/Language-Python-yellow) ![Docker](https://img.shields.io/badge/Container-Docker-blue) ![Security](https://img.shields.io/badge/Security-Bandit%20%7C%20Semgrep-red) ![Linting](https://img.shields.io/badge/Linting-Flake8-green) ![Testing](https://img.shields.io/badge/Testing-pytest-orange)
+
 ## Workflows
 
 ### app-pipeline.yml
