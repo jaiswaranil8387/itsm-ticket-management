@@ -339,6 +339,14 @@ cd ~/my-complete-infra
 ./deploy_all.sh
 ```
 
+#### Stopping the Docker Containers
+
+To stop the Docker containers after deployment or when done:
+
+```bash
+docker-compose -f ../ubuntu/docker-compose-ubuntu.yml down
+```
+
 ### Option 2: Using AWS EC2 Instance
 
 After completing the prerequisites and setup steps for Option 2 (as detailed in the Prerequisites & Setup Guide), follow these steps on your AWS EC2 instance:

@@ -114,6 +114,12 @@ cd ~/k8s
 
 ```
 
+6. **Stop the Docker containers (after deployment or when done):**
+To stop the Docker containers:
+```bash
+docker-compose -f docker-compose-ubuntu.yml down
+```
+
 
 
 ## Contents
