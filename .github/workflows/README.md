@@ -6,13 +6,26 @@ This directory contains GitHub Actions workflows for the ITSM Ticket Management 
 
 ### app-pipeline.yml
 
-**Name:** Python Linting (Flake8)
+**Name:** DevSecOps CI/CD Pipeline
 
-**Purpose:** This CI/CD pipeline automates code quality checks, security scans, testing, and Docker image building/deployment for the Python Flask application.
+**Purpose:** This production-grade pipeline automates the "Code-to-Cluster" journey. It enforces strict security gates (SAST, SCA, Secret Scanning), runs unit tests, builds Docker images, and updates Kubernetes manifests via GitOps.
 
 #### Triggers
-- **Push** to `master` branch when files in `src/` directory are changed
-- **Pull Request** to `master` branch when files in `src/` directory are changed
+- **Push** to `master` branch (only for changes in `src/`)
+- **Pull Request** to `master` branch (only for changes in `src/`)
+
+#### Pipeline Visualization
+```mermaid
+graph TD
+    A[Push to Master] --> B(Checkout & Setup)
+    B --> C{Security Gates}
+    C -- Pass --> D[Build & Test]
+    C -- Fail --> X[Block Deployment]
+    D --> E[Docker Build & Push]
+    E --> F[Trivy Container Scan]
+    F --> G[Update K8s Manifest]
+    G --> H[ArgoCD Sync (Automatic)]
+```
 
 #### Permissions
 - `contents: write` - Required for pushing version updates back to the repository
@@ -87,19 +100,18 @@ The pipeline uses semantic versioning based on:
 - GitHub Actions run number as the patch version
 - Format: `v{base}.{run_number}` (e.g., `v7.45`)
 
-#### Security Features
+#### Security Features (Enforcing Mode)
+This pipeline implements a **"Shift Left"** security strategy. Unlike standard pipelines, this workflow acts as a Quality Gate and **will fail the build** if critical vulnerabilities are detected.
 
-- **Code Quality:** Flake8 linting
-- **Testing:** pytest unit tests
-- **Security Scans:**
-  - Bandit for Python security issues
-  - pip-audit for dependency vulnerabilities
-  - Semgrep for static analysis
-  - Gitleaks for secrets detection
-  - Trivy for container vulnerabilities
+| Tool | Type | Behavior |
+|------|------|----------|
+| **Flake8** | Linting | ⚠️ Non-Blocking (Reports style issues only) |
+| **Bandit** | SAST | 🛑 **Blocking** (Fails on Medium/High risks) |
+| **Semgrep** | SAST | 🛑 **Blocking** (Fails on security findings) |
+| **Gitleaks** | Secret Scan | 🛑 **Blocking** (Fails if secrets are found) |
+| **Trivy** | Container Scan | 🛑 **Blocking** (Fails on Critical/High CVEs) |
 
 #### Notes
-
-- The pipeline is designed to be non-blocking for most checks (using `--exit-zero` flags) to allow development to continue while maintaining quality gates
-- Version updates are automatically committed with `[skip ci]` to prevent infinite loops
-- All scans focus on the `src/` directory to maintain scope and performance
+- **Caching:** Uses `pip` caching to speed up dependency installation.
+- **GitOps:** The final step updates the `active-deployment.yaml` file, which triggers ArgoCD to deploy the new version automatically.
+- **Loop Prevention:** The automated commit includes `[skip ci]` to prevent the pipeline from triggering itself recursively.
