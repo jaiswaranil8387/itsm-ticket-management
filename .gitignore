@@ -42,6 +42,7 @@ ubuntu/my-complete-infra/
 ubuntu/src/
 ubuntu/ubuntu
 ubuntu/itsm-ticket-management
+my-complete-infra
 
 # App backups / versions
 app_*
