@@ -123,11 +123,15 @@
       args:
         chdir: $HOME
 
-    - name: Copy kubeconfig to ubuntu user
+    - name: Configure K8s Access and n8n Storage
       shell: |
+        # 1. Kubeconfig Setup
         mkdir -p /home/ubuntu/.kube
         cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
         chown ubuntu:ubuntu /home/ubuntu/.kube/config
+        # 2. n8n Storage Setup
+        mkdir -p /var/lib/n8n-data
+        chown -R 1000:1000 /var/lib/n8n-data
 
     - name: Install Calico CNI
       become_user: ubuntu
