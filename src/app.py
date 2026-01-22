@@ -337,11 +337,12 @@ def get_chart_data():
     tickets = get_all_tickets()
     priorities = [ticket[3] for ticket in tickets]
     statuses = [ticket[4] for ticket in tickets]
-    return jsonify({
+    response = jsonify({
         'priority_counts': dict(Counter(priorities)),
         'status_counts': dict(Counter(statuses))
     })
-
+    response.headers.add('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0')
+    return response
 
 @app.route('/search', methods=['GET', 'POST'])
 @log_execution

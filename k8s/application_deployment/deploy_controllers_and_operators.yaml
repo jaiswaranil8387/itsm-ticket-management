@@ -124,3 +124,12 @@
           --dry-run=client -o yaml | kubectl apply -f -
       register: cf_secret_result
       changed_when: "'created' in cf_secret_result.stdout or 'configured' in cf_secret_result.stdout"
+
+    - name: Create n8n Auth Secret
+      ansible.builtin.shell: |
+        kubectl create secret generic n8n-secret \
+          --from-literal=n8n-auth-password="{{ lookup('env', 'N8N') }}" \
+          -n default \
+          --dry-run=client -o yaml | kubectl apply -f -
+      register: n8n_secret_result
+      changed_when: "'created' in n8n_secret_result.stdout or 'configured' in n8n_secret_result.stdout"

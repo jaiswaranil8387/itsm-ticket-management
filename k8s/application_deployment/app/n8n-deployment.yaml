@@ -1,0 +1,157 @@
+# ---------------------------------------------------------
+# 1. Persistent Volume (Points to Master Node Disk)
+# ---------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: n8n-local-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/var/lib/n8n-data"
+
+---
+# ---------------------------------------------------------
+# 2. Persistent Volume Claim
+# ---------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: n8n-pvc
+  namespace: default
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  selector:
+    matchLabels:
+      type: local
+
+---
+# ---------------------------------------------------------
+# 3. Deployment (Pinned to Master Node)
+# ---------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: n8n
+  template:
+    metadata:
+      labels:
+        app: n8n
+    spec:
+      # Pin to Master Node
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+
+      containers:
+        - name: n8n
+          image: n8nio/n8n:latest
+          ports:
+            - containerPort: 5678
+          env:
+            - name: N8N_BASIC_AUTH_ACTIVE
+              value: "true"
+            - name: N8N_BASIC_AUTH_USER
+              value: "admin"
+            
+            # --- 1. N8N AUTH PASSWORD (From New Ansible Secret) ---
+            - name: N8N_BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-secret
+                  key: n8n-auth-password
+            
+            # --- 2. DB CONFIGURATION ---
+            - name: DB_TYPE
+              value: "postgresdb"
+            - name: DB_POSTGRESDB_HOST
+              value: "app-db-rw.default.svc.cluster.local"
+            - name: DB_POSTGRESDB_PORT
+              value: "5432"
+            - name: DB_POSTGRESDB_DATABASE
+              value: "app"
+            - name: DB_POSTGRESDB_USER
+              value: "app"
+
+            # --- 3. DB PASSWORD (From Existing Secret) ---
+            - name: DB_POSTGRESDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-db-app
+                  key: password
+                  
+            - name: GENERIC_TIMEZONE
+              value: "Asia/Kolkata"
+            - name: TZ
+              value: "Asia/Kolkata"
+            - name: WEBHOOK_URL
+              value: "https://n8n.aniljaiswar.pp.ua/"
+              
+          volumeMounts:
+            - name: n8n-storage
+              mountPath: /home/node/.n8n
+      volumes:
+        - name: n8n-storage
+          persistentVolumeClaim:
+            claimName: n8n-pvc
+
+---
+# ---------------------------------------------------------
+# 4. Service & Ingress
+# ---------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n-service
+  namespace: default
+spec:
+  selector:
+    app: n8n
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5678
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: n8n.aniljaiswar.pp.ua
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: n8n-service
+                port:
+                  number: 80

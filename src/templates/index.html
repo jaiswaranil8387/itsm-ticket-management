@@ -469,13 +469,14 @@
         if (priorityChartInstance) priorityChartInstance.destroy();
         if (statusChartInstance) statusChartInstance.destroy();
 
+        const priorityOrder = ['High', 'Medium', 'Low'];
         // Pie Chart
         priorityChartInstance = new Chart(priorityCtx, {
             type: 'doughnut', // Doughnut looks more modern
             data: {
-                labels: ['High', 'Medium', 'Low'],
+                labels: priorityOrder,
                 datasets: [{
-                    data: Object.values(priorityData),
+                    data: priorityOrder.map(p => priorityData[p] || 0),
                     backgroundColor: ['#f87171', '#fbbf24', '#34d399'],
                     borderColor: 'transparent',
                     hoverOffset: 4
