@@ -2,7 +2,7 @@
 
 A web-based IT Service Management (ITSM) application designed to streamline the creation, tracking, and resolution of IT support tickets. Built with Python, Flask, PostgreSQL, and HTML, this tool simulates real-world helpdesk workflows, making it ideal for managing IT incidents and user support requests.
 
-![Python](https://img.shields.io/badge/Python-3.10-blue) ![Flask](https://img.shields.io/badge/Flask-2.3.3-lightgrey) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue) ![HTML](https://img.shields.io/badge/HTML-5-orange) ![CSS](https://img.shields.io/badge/CSS-3-blue) ![JavaScript](https://img.shields.io/badge/JavaScript-ES6-yellow) ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple) ![Jinja2](https://img.shields.io/badge/Jinja2-3.1.2-green) ![Werkzeug](https://img.shields.io/badge/Werkzeug-2.3.6-red) ![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-1.21.0-green) ![Gunicorn](https://img.shields.io/badge/Gunicorn-21.2.0-pink) ![Docker](https://img.shields.io/badge/Docker-24.0.5-blue) ![Status](https://img.shields.io/badge/Status-Active-success)
+![Python](https://img.shields.io/badge/Python-3.10-blue) ![Flask](https://img.shields.io/badge/Flask-2.3.3-lightgrey) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue) ![HTML](https://img.shields.io/badge/HTML-5-orange) ![CSS](https://img.shields.io/badge/CSS-3-blue) ![JavaScript](https://img.shields.io/badge/JavaScript-ES6-yellow) ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple) ![Jinja2](https://img.shields.io/badge/Jinja2-3.1.2-green) ![Werkzeug](https://img.shields.io/badge/Werkzeug-2.3.6-red) ![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-1.21.0-green) ![Gunicorn](https://img.shields.io/badge/Gunicorn-21.2.0-pink) ![Docker](https://img.shields.io/badge/Docker-24.0.5-blue) ![n8n](https://img.shields.io/badge/n8n-1.0-orange) ![Status](https://img.shields.io/badge/Status-Active-success)
 
 ## Features
 - **Ticket Management**: Create, edit, search, and track tickets with attributes like title, description, priority (High, Medium, Low), and status (Open, In Progress, Resolved).
@@ -10,6 +10,10 @@ A web-based IT Service Management (ITSM) application designed to streamline the 
 - **Admin Dashboard**: Admins can manage users (add/remove) and update ticket details, while readonly users can view tickets.
 - **Ticket Search**: Search tickets by title for quick access to relevant issues.
 - **Data Visualization**: Displays ticket priority and status distributions (via `/get_chart_data` endpoint, compatible with Chart.js).
+- **Workflow Automation (n8n)**: Integrates n8n for event-driven "ChatOps" and incident response. Includes real-time critical incident response that listens to the PostgreSQL database (`tickets` table), filters for high/critical priority tickets, and sends email alerts to the engineering team. The n8n container is secured with read-only filesystem and no-new-privileges.
+
+  ![n8n Workflow](n8n_workflow.png)
+
 - **Responsive UI**: Built with HTML and Jinja2 templates for a user-friendly interface, suitable for support staff.
 
 ## Technologies
@@ -19,6 +23,7 @@ A web-based IT Service Management (ITSM) application designed to streamline the 
 - **Security**: Werkzeug for password hashing and secure authentication
 - **Templating**: Jinja2 for dynamic HTML rendering
 - **Frontend**: Bootstrap (implied for responsive design)
+- **Workflow Automation**: n8n (event-driven automation and incident response)
 - **Version Control**: Git, hosted on GitHub
 
 ## Prerequisites
@@ -231,6 +236,16 @@ C:\Program Files\PostgreSQL\16\data
       http://localhost:5000
       https://uat.aniljaiswar.pp.ua/
    - Log in with the default admin credentials or create new users via the admin dashboard.
+
+7. **Access n8n Dashboard** (for Workflow Automation):
+   - The n8n service is included in the `docker-compose-postgres.yaml` file.
+   - URL: [http://localhost:5678](http://localhost:5678)
+   - *Note: On first run, you will be prompted to set up an owner account.*
+   - **Configure Credentials**:
+     - **Postgres**: Host: `db` (Service name), Port: `5432`, User/Pass: (Same as `.env`).
+     - **Email**: Supports SMTP or Gmail OAuth2 (ensure Redirect URLs are configured in Google Cloud Console).
+   - **Import Workflow**:
+     - Import the JSON workflow file located in `workflows/Critical_Incident_Workflow.json` (if available) or create the flow manually using the Postgres Trigger node.
 
 ## Usage
 - **Login**: Use the default admin credentials (username: `admin`, password: `admin123`) or create a new user.

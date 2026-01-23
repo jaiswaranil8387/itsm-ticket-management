@@ -1,0 +1,212 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "tableName": {
+          "__rl": true,
+          "value": "tickets",
+          "mode": "list",
+          "cachedResultName": "tickets"
+        },
+        "firesOn": "UPDATE",
+        "additionalFields": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTrigger",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        -96
+      ],
+      "id": "fb53dbb4-a25c-4503-9b85-ba72c460f812",
+      "name": "Postgres Trigger",
+      "credentials": {
+        "postgres": {
+          "id": "D40R5pqBa6X5CBK2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9e858214-e06a-4af9-888a-c2e64bc40deb",
+              "leftValue": "={{ $json.payload.priority }}",
+              "rightValue": "High",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "721d2fee-418b-45b9-a8d8-cc3c01ee842e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "tableName": {
+          "__rl": true,
+          "value": "tickets",
+          "mode": "list",
+          "cachedResultName": "tickets"
+        },
+        "additionalFields": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTrigger",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        96
+      ],
+      "id": "b7f30ef9-8771-4867-b7bd-443c962e54c8",
+      "name": "Postgres Trigger1",
+      "credentials": {
+        "postgres": {
+          "id": "D40R5pqBa6X5CBK2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "jaiswaranil8387@gmail.com",
+        "subject": "=CRITICAL INCIDENT:  {{ $json.payload.title }}",
+        "emailType": "text",
+        "message": "=A new High Priority incident has been reported.  ID: {{ $json.payload.id }} Title: {{ $json.payload.title }} Description: {{ $json.payload.description }}  Please investigate immediately.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        -96
+      ],
+      "id": "33950320-de58-4776-9cef-1d69a60512fa",
+      "name": "Send a message",
+      "webhookId": "d414f14b-9df4-4740-90d6-0dc8b85551fe",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fsyIfMW9DEl6szpb",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Postgres Trigger": [
+      {
+        "json": {
+          "length": 231,
+          "processId": 24264,
+          "channel": "n8n_channel_fb53dbb4_a25c_4503_9b85_ba72c460f812_manual",
+          "payload": {
+            "id": 1,
+            "title": "Login Failure",
+            "description": "User reports login issue on portals, updated",
+            "priority": "High",
+            "status": "Resolved",
+            "created_at": "2025-07-20 10:00:00"
+          },
+          "name": "notification"
+        }
+      }
+    ],
+    "Postgres Trigger1": [
+      {
+        "json": {
+          "length": 231,
+          "processId": 24264,
+          "channel": "n8n_channel_fb53dbb4_a25c_4503_9b85_ba72c460f812_manual",
+          "payload": {
+            "id": 1,
+            "title": "Login Failure",
+            "description": "User reports login issue on portals, updated",
+            "priority": "High",
+            "status": "Resolved",
+            "created_at": "2025-07-20 10:00:00"
+          },
+          "name": "notification"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Postgres Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Trigger1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "22d580e9-ff03-441b-8c6b-518d49be421e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3d6844725c177ce906cb0668c653898c2aef2d584497f918256cbf1fa6749e98"
+  },
+  "id": "I9GWCjoF1TnR4LLuZlATi",
+  "tags": []
+}
