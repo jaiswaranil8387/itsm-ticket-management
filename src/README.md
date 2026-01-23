@@ -12,7 +12,7 @@ A web-based IT Service Management (ITSM) application designed to streamline the 
 - **Data Visualization**: Displays ticket priority and status distributions (via `/get_chart_data` endpoint, compatible with Chart.js).
 - **Workflow Automation (n8n)**: Integrates n8n for event-driven "ChatOps" and incident response. Includes real-time critical incident response that listens to the PostgreSQL database (`tickets` table), filters for high/critical priority tickets, and sends email alerts to the engineering team. The n8n container is secured with read-only filesystem and no-new-privileges.
 
-![n8n Workflow](https://raw.githubusercontent.com/jaiswaranil8387/itsm-ticket-management/master/src/n8n-workflow.png)
+<img src="n8n_workflow.png" width="800" alt="n8n Workflow">
 
 - **Responsive UI**: Built with HTML and Jinja2 templates for a user-friendly interface, suitable for support staff.
 
