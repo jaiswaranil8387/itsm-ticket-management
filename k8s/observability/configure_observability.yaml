@@ -139,47 +139,53 @@
         seconds: 45
 
     # -------------------------------------------------------
-    # 2. CREATE INDEX: Now safe to run because Kibana is Green
+    # 2. CREATE INDEX: Run curl from INSIDE the cluster
     # -------------------------------------------------------
-    - name: 4c.Create logstash index pattern
-      uri:
-        url: http://kibana.logging.svc.cluster.local:5601/api/saved_objects/index-pattern/logstash-pattern
-        method: POST
-        headers:
-          kbn-xsrf: "true"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          attributes:
-            title: "logstash-*"
-            timeFieldName: "@timestamp"
-        timeout: 10
-        status_code: [200, 409]
+    - name: 4c. Create 'logstash-*' Index Pattern
+      shell: |
+        # 1. Clean up any stuck pods from previous runs
+        kubectl delete pod create-index --ignore-not-found=true --wait=true --grace-period=0
+        
+        # 2. Run the curl command inside a new Pod
+        kubectl run create-index --image=curlimages/curl --restart=Never --rm -i -- \
+          curl -s -X POST "http://kibana.logging.svc.cluster.local:5601/api/saved_objects/index-pattern/logstash-pattern" \
+          -H "kbn-xsrf: true" \
+          -H "Content-Type: application/json" \
+          -d '{"attributes": {"title": "logstash-*", "timeFieldName": "@timestamp"}}'
       register: kibana_index_result
-      retries: 60
+      # Retry just in case of blips
+      retries: 5
       delay: 5
-      until: kibana_index_result.status in [200, 409]
+      # Success if exit code is 0 (OK)
+      until: kibana_index_result.rc == 0
+      # Don't fail if it already exists (409 Conflict)
+      failed_when: 
+        - kibana_index_result.rc != 0
+        - "'409' not in kibana_index_result.stdout"
+      changed_when: "'200' in kibana_index_result.stdout"
 
     # -------------------------------------------------------
-    # 3. SET DEFAULT
+    # 3. SET DEFAULT: Run curl from INSIDE the cluster
     # -------------------------------------------------------
     - name: 4d. Set Default Index Pattern to 'logstash-*'
-      uri:
-        url: http://kibana.logging.svc.cluster.local:5601/api/kibana/settings
-        method: POST
-        headers:
-          kbn-xsrf: "true"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          changes:
-            defaultIndex: "logstash-pattern"
-        status_code: 200
-        timeout: 10
+      shell: |
+        # 1. Clean up
+        kubectl delete pod set-default-index --ignore-not-found=true --wait=true --grace-period=0
+        
+        # 2. Run curl
+        kubectl run set-default-index --image=curlimages/curl --restart=Never --rm -i -- \
+          curl -s -X POST "http://kibana.logging.svc.cluster.local:5601/api/kibana/settings" \
+          -H "kbn-xsrf: true" \
+          -H "Content-Type: application/json" \
+          -d '{"changes": {"defaultIndex": "logstash-pattern"}}'
       register: default_index_result
       retries: 5
       delay: 5
-      until: default_index_result.status == 200
+      until: default_index_result.rc == 0
+      changed_when: "'200' in default_index_result.stdout"
+      failed_when: 
+        - default_index_result.rc != 0
+        - "'200' not in default_index_result.stdout"
 
     - name: Final Summary
       debug:
