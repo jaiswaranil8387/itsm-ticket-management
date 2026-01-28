@@ -135,48 +135,51 @@
       failed_when: false # Don't fail if curl errors initially (pod starting)
 
     - name: Sleep for 45 seconds to let Kibana initialize fully
-        ansible.builtin.pause:
-          seconds: 45
+      ansible.builtin.pause:
+        seconds: 45
 
     # -------------------------------------------------------
     # 2. CREATE INDEX: Now safe to run because Kibana is Green
     # -------------------------------------------------------
-    - name: 4c. Create 'logstash-*' Index Pattern
-      shell: |
-        kubectl run create-index --image=curlimages/curl --restart=Never --rm -i -- \
-          curl -s -X POST "http://kibana.logging.svc.cluster.local:5601/api/saved_objects/index-pattern/logstash-pattern" \
-          -H "kbn-xsrf: true" \
-          -H "Content-Type: application/json" \
-          -d '{"attributes": {"title": "logstash-*", "timeFieldName": "@timestamp"}}'
+    - name: 4c.Create logstash index pattern
+      uri:
+        url: http://kibana.logging.svc.cluster.local:5601/api/saved_objects/index-pattern/logstash-pattern
+        method: POST
+        headers:
+          kbn-xsrf: "true"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          attributes:
+            title: "logstash-*"
+            timeFieldName: "@timestamp"
+        timeout: 10
+        status_code: [200, 409]
       register: kibana_index_result
-      # Retry thiss specific step just in case of momentary API blips
-      retries: 5
+      retries: 60
       delay: 5
-      until: kibana_index_result.rc == 0
-      # Valid failure: Exit code non-zero AND it wasn't a "409 Conflict" (already exists)
-      failed_when: 
-        - kibana_index_result.rc != 0
-        - "'409' not in kibana_index_result.stdout"
-      changed_when: "'200' in kibana_index_result.stdout"
+      until: kibana_index_result.status in [200, 409]
 
     # -------------------------------------------------------
     # 3. SET DEFAULT
     # -------------------------------------------------------
     - name: 4d. Set Default Index Pattern to 'logstash-*'
-      shell: |
-        kubectl run set-default-index --image=curlimages/curl --restart=Never --rm -i -- \
-          curl -s -X POST "http://kibana.logging.svc.cluster.local:5601/api/kibana/settings" \
-          -H "kbn-xsrf: true" \
-          -H "Content-Type: application/json" \
-          -d '{"changes": {"defaultIndex": "logstash-pattern"}}'
+      uri:
+        url: http://kibana.logging.svc.cluster.local:5601/api/kibana/settings
+        method: POST
+        headers:
+          kbn-xsrf: "true"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          changes:
+            defaultIndex: "logstash-pattern"
+        status_code: 200
+        timeout: 10
       register: default_index_result
       retries: 5
       delay: 5
-      until: default_index_result.rc == 0
-      changed_when: "'200' in default_index_result.stdout"
-      failed_when: 
-        - default_index_result.rc != 0
-        - "'200' not in default_index_result.stdout"
+      until: default_index_result.status == 200
 
     - name: Final Summary
       debug:

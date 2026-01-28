@@ -1,6 +1,6 @@
 # 🚀 Automated Kubernetes DevOps Pipeline on AWS with ArgoCD
 
-![Project Status](https://img.shields.io/badge/Status-Complete-success) ![Terraform](https://img.shields.io/badge/IaC-Terraform-purple) ![Ansible](https://img.shields.io/badge/Config-Ansible-red) ![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-blue) ![ArgoCD](https://img.shields.io/badge/GitOps-ArgoCD-blue) ![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-orange) ![Elastic](https://img.shields.io/badge/Logging-EFK-green) ![Jaeger](https://img.shields.io/badge/Tracing-Jaeger-yellow)
+![Project Status](https://img.shields.io/badge/Status-Complete-success) ![Terraform](https://img.shields.io/badge/IaC-Terraform-purple) ![Ansible](https://img.shields.io/badge/Config-Ansible-red) ![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-blue) ![ArgoCD](https://img.shields.io/badge/GitOps-ArgoCD-blue) ![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-orange) ![Elastic](https://img.shields.io/badge/Logging-EFK-green) ![Jaeger](https://img.shields.io/badge/Tracing-Jaeger-yellow) ![n8n](https://img.shields.io/badge/n8n-1.0-orange)
 
 ## 📋 Table of Contents
 
@@ -112,11 +112,13 @@ Create a file named `.env` in the `k8s` directory with the following variables:
 
 - **TUNNEL_TOKEN**: Required for Cloudflare tunnel setup.
 - **FLASK_SECRET_KEY**: Secret key for the Flask application.
+- **N8N**: Secret key for the N8N application.
 
 Example `.env` file:
 ```
 TUNNEL_TOKEN=your_cloudflare_tunnel_token_here
 FLASK_SECRET_KEY=your_flask_secret_key_here
+N8N=your_n8n_secret_key_here
 ```
 
 Once these steps are completed on your EC2 instance, you can proceed to run `./deploy_all.sh`.
@@ -166,6 +168,7 @@ graph TD
             Graf[Prometheus + Grafana]:::app
             EFK[EFK Logging Stack]:::app
             Jaeger[Jaeger Tracing]:::app
+            n8n[n8n Workflow Automation]:::app
         end
     end
 
@@ -195,6 +198,9 @@ graph TD
     * **Monitoring:** Prometheus + Grafana.
     * **Logging:** EFK Stack (Elasticsearch, **Fluentbit**, Kibana).
     * **Tracing:** Elasticsearch + Jaeger.
+- **Workflow Automation (n8n)**: Integrates n8n for event-driven "ChatOps" and incident response. Includes real-time critical incident response that listens to the PostgreSQL database (`tickets` table), filters for high/critical priority tickets, and sends email alerts to the engineering team. The n8n container is secured with read-only filesystem and no-new-privileges.
+
+<img src="n8n_workflow.png" width="800" alt="n8n Workflow">
 
 ---
 
@@ -261,11 +267,12 @@ Create a `.env` file in the `k8s` directory with the following variables:
 
 - **TUNNEL_TOKEN**: Required for Cloudflare tunnel setup.
 - **FLASK_SECRET_KEY**: Secret key for the Flask application.
-
+- **N8N**: Secret key for the N8N application.
 Example `.env` file:
 ```
 TUNNEL_TOKEN=your_cloudflare_tunnel_token_here
 FLASK_SECRET_KEY=your_flask_secret_key_here
+N8N=your_n8n_secret_key_here
 ```
 
 #### 4. SSH Key Pair Setup (GitHub & EC2)
@@ -369,6 +376,15 @@ This script runs Terraform apply, updates the Ansible inventory dynamically, and
 ./deploy_all.sh
 ```
 
+4. **Access n8n Dashboard** (for Workflow Automation):
+   - The n8n service is included in the `docker-compose-postgres.yaml` file.
+   - URL: [http://<PublicIP>:5678](http://<PublicIP>:5678) | [n8n.aniljaiswar.pp.ua](https://n8n.aniljaiswar.pp.ua/)
+   - *Note: On first run, you will be prompted to set up an owner account.*
+   - **Configure Credentials**:
+     - **Postgres**: Host: `db` (Service name: app-db-rw.default.svc.cluster.local), Port: `5432`, User/Pass: (Same as `.env`).
+     - **Email**: Supports SMTP or Gmail OAuth2 (ensure Redirect URLs are configured in Google Cloud Console).
+   - **Import Workflow**:
+     - Import the JSON workflow file located in `src/Critical_Incident_Workflow.json` (if available) or create the flow manually using the Postgres Trigger node.
 
 
 ---
@@ -384,6 +400,7 @@ This project uses **Nginx Ingress** to route traffic. We do not use AWS LoadBala
 | **Grafana** | HTTPS | [monitor.aniljaiswar.pp.ua](https://monitor.aniljaiswar.pp.ua/) | `admin` / `admin` |
 | **ArgoCD** | HTTPS | [argocd.aniljaiswar.pp.ua](https://argocd.aniljaiswar.pp.ua/) | `admin` / *(See below)* |
 | **Jaeger UI** | HTTPS | [jaeger.aniljaiswar.pp.ua](https://jaeger.aniljaiswar.pp.ua/) | N/A |
+| **n8n UI** | HTTPS | [n8n.aniljaiswar.pp.ua](https://n8n.aniljaiswar.pp.ua/) | N/A |
 
 > **DNS Note:** Ensure your DNS provider (`aniljaiswar.pp.ua`) points these subdomains to the **Public IP** of your Kubernetes Worker Node. You can find this IP by running `terraform output` or checking the AWS Console..
 >
@@ -393,6 +410,7 @@ This project uses **Nginx Ingress** to route traffic. We do not use AWS LoadBala
 > - Grafana: `https://<PublicIP>:443`
 > - ArgoCD: `https://<PublicIP>:443`
 > - Jaeger UI: `https://<PublicIP>:443`
+> - n8n UI: `https://<PublicIP>:5678`
 
 **To retrieve the initial ArgoCD password:**
 
